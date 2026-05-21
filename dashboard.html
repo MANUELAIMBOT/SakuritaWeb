@@ -180,6 +180,10 @@
         width: 100%; height: 150px; object-fit: cover;
         border-bottom: 1px solid var(--purple-border); background: #130a22;
       }
+      .card-banner-img {
+        width: 100%; height: 150px; object-fit: cover;
+        border-bottom: 1px solid var(--purple-border); background: #130a22;
+      }
       .card-body-details { padding: 14px; display: flex; flex-direction: column; gap: 8px; }
       
       .product-meta-row { display: flex; justify-content: space-between; align-items: center; }
@@ -461,19 +465,24 @@
         });
       });
 
-      // ✅ REDIRECCIÓN A index.html SI NO HAY SESIÓN ACTIVA
-      firebase.auth().onAuthStateChanged((user) => {
-        if (user) {
-          escucharDatosUsuario(user.uid);
-        } else {
-          window.location.href = "index.html";
-        }
-      });
+      // ✅ SE CONFIGURÓ LA PERSISTENCIA LOCAL PARA EVITAR LOGOUTS INDESEADOS Y ARREGLAR REDIRECCIÓN
+      firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+        .then(() => {
+          return firebase.auth().onAuthStateChanged((user) => {
+            if (user) {
+              escucharDatosUsuario(user.uid);
+            } else {
+              window.location.href = "index.html";
+            }
+          });
+        })
+        .catch((error) => {
+          console.error("Error al configurar persistencia de sesión:", error);
+        });
 
       let catalogoInicializado = false;
 
       function escucharDatosUsuario(uid) {
-        // onSnapshot solo para datos del usuario (saldo, rango) — en tiempo real está bien
         db.collection('usuarios').doc(uid).onSnapshot((doc) => {
           if (!doc.exists) return;
           currentUserCache = doc.data();
@@ -492,12 +501,10 @@
           const pctDesc = TABLA_DESCUENTOS[rangoUser] || 0;
           currentDiscountMultiplier = (100 - pctDesc) / 100;
 
-          // Catálogo: cargar UNA sola vez con get(), no onSnapshot para evitar recargas infinitas
           if (!catalogoInicializado) {
             catalogoInicializado = true;
             cargarCatalogoUnaVez();
           } else {
-            // Si el descuento cambia, re-renderizar con datos ya cargados
             renderizarCatalogoFiltrado();
           }
         });
@@ -556,7 +563,6 @@
         let listaFiltrada = [];
 
         if (activeCategoryFilter === "home") {
-          // Home: mostrar TODAS las cards de todas las categorías
           listaFiltrada = [...fullProductsDatabase];
         } else {
           listaFiltrada = fullProductsDatabase.filter(p => p.categoria === activeCategoryFilter);
@@ -711,7 +717,6 @@
         const userRef = db.collection('usuarios').doc(uid);
         const fechaHoy = new Date().toLocaleString('es-ES');
 
-        // Si es tipo key: buscar key disponible en stock primero
         const obtenerKey = () => {
           if (prod.tipo !== 'key') return Promise.resolve(null);
           return db.collection('productos').doc(prod.id)
@@ -728,7 +733,6 @@
         obtenerKey().then(keyDoc => {
           const batch = db.batch();
 
-          // Actualizar saldo usuario
           batch.update(userRef, {
             saldo_principal: walletP,
             saldo_bonus: walletB,
@@ -739,9 +743,7 @@
           if (prod.tipo === 'key' && keyDoc) {
             const keyReal = keyDoc.data().key;
             entregaTexto = keyReal;
-            // Marcar key como usada
             batch.update(keyDoc.ref, { usada: true, usada_por: uid, usada_en: fechaHoy });
-            // Guardar compra
             const compraRef = userRef.collection('compras').doc();
             batch.set(compraRef, {
               producto: prod.nombre,
@@ -765,7 +767,6 @@
           if (prod.tipo === 'key' && entregaTexto !== 'SERVICIO EN ESPERA DE ACTIVACIÓN MANUAL') {
             try { navigator.clipboard.writeText(entregaTexto); } catch(e) {}
           }
-          // Actualizar caché local de saldo para no esperar snapshot
           currentUserCache.saldo_principal = walletP;
           currentUserCache.saldo_bonus = walletB;
 
