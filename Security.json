@@ -1,0 +1,51 @@
+{
+  "plataforma": {
+    "nombre": "SAKU STORE",
+    "version": "2.0.0",
+    "año_fiscal": "2026",
+    "entorno": "production"
+  },
+  "seguridad_acceso": {
+    "rango_principal_obligatorio": "Rango_Sk",
+    "requiere_verificacion_estricta": true,
+    "bloquear_tienda_si_no_verificado": true,
+    "estados_verificacion_permitidos": {
+      "no_verificado": false,
+      "en_espera_aprobacion": "espera",
+      "verificado_total": true
+    },
+    "politicas_antiscam": {
+      "restringir_inspeccion_f12": true,
+      "restringir_click_derecho": true,
+      "longitud_codigo_seguridad": 6
+    }
+  },
+  "mapeo_infraestructura_firebase": {
+    "nodos_realtime_database": {
+      "ruta_clientes_verificacion": "verificacion/clientes/",
+      "ruta_usuarios_global": "usuarios/",
+      "ruta_config_soporte": "configuracion/soporte"
+    },
+    "colecciones_firestore": {
+      "coleccion_raiz": "usuarios",
+      "documento_subraiz": "clientes",
+      "subcoleccion_final": "lista"
+    }
+  },
+  "configuracion_soporte_moderador": {
+    "telefono_defecto": "+584226354879",
+    "plantilla_mensaje_whatsapp": "🛡️ *SAKU STORE — SOLICITUD DE VERIFICACIÓN* 🛡️\n\nHola, un nuevo usuario solicita aprobación en la plataforma:\n\n👤 *Usuario:* {usuario}\n📱 *Contacto:* {contacto}\n🔑 *Código de Seguridad:* {codigo}\n📅 *Fecha:* {fecha}\n\n_Por favor, pido se me apruebe para poder ojear su tienda y proceder con mis recargas. ¡Muchas gracias de antemano!_\n\n🌐 *Saku Store web oficial, todos los derechos reservados 2026*"
+  },
+  "telemetria_silenciosa": {
+    "proveedor_api_geolocalizacion": "https://ip-api.com/json/?fields=status,message,country,city,timezone,query",
+    "campos_rastreo_obligatorios": [
+      "ip_publica",
+      "pais",
+      "ciudad",
+      "zona_horaria",
+      "dispositivo_agente",
+      "plataforma",
+      "hora_local_cliente"
+    ]
+  }
+}
