@@ -180,10 +180,6 @@
         width: 100%; height: 150px; object-fit: cover;
         border-bottom: 1px solid var(--purple-border); background: #130a22;
       }
-      .card-banner-img {
-        width: 100%; height: 150px; object-fit: cover;
-        border-bottom: 1px solid var(--purple-border); background: #130a22;
-      }
       .card-body-details { padding: 14px; display: flex; flex-direction: column; gap: 8px; }
       
       .product-meta-row { display: flex; justify-content: space-between; align-items: center; }
@@ -465,20 +461,18 @@
         });
       });
 
-      // ✅ SE CONFIGURÓ LA PERSISTENCIA LOCAL PARA EVITAR LOGOUTS INDESEADOS Y ARREGLAR REDIRECCIÓN
-      firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-        .then(() => {
-          return firebase.auth().onAuthStateChanged((user) => {
-            if (user) {
-              escucharDatosUsuario(user.uid);
-            } else {
-              window.location.href = "index.html";
+      // ✅ COMPROBACIÓN REPARADA: Da tiempo de carga a Firebase Auth y evita redirecciones erróneas
+      firebase.auth().onAuthStateChanged((user) => {
+        if (user) {
+          escucharDatosUsuario(user.uid);
+        } else {
+          setTimeout(() => {
+            if (!firebase.auth().currentUser) {
+              window.location.replace("index.html");
             }
-          });
-        })
-        .catch((error) => {
-          console.error("Error al configurar persistencia de sesión:", error);
-        });
+          }, 800);
+        }
+      });
 
       let catalogoInicializado = false;
 
