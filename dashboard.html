@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SAKU STORE — DASHBOARD</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+      :root {
+        --bg-dark: #040108;
+        --panel-bg: #0b0612;
+        --item-bg: #11091b;
+        --cyan-neon: #00f0ff;
+        --cyan-glow: rgba(0, 240, 255, 0.55);
+        --magenta-neon: #ff00a0;
+        --magenta-glow: rgba(255, 0, 160, 0.45);
+        --purple-border: #221334;
+        --text-gray: #8e8599;
+        --gold: #ffd700;
+        --success: #00ff66;
+        --danger: #ff3131;
+        --green-neon: #39ff14;
+      }
+
+      * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; font-family: 'Rajdhani', sans-serif; }
+      html, body { background-color: var(--bg-dark); color: #fff; min-height: 100vh; width: 100vw; overflow-x: hidden; }
+
+      /* FONDO */
+      .bg-particles { position: fixed; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(circle at 50% 30%, rgba(45,10,85,0.45) 0%, transparent 80%); }
+      .bg-particles::before, .bg-particles::after { content: ""; position: absolute; inset: -100px; background-image: radial-gradient(circle, rgba(255,255,255,0.35) 1.2px, transparent 1.2px), radial-gradient(circle, var(--cyan-neon) 1.5px, transparent 1.5px); background-size: 80px 80px, 130px 130px; opacity: 0.75; animation: cyberFloat 20s linear infinite; }
+      .bg-particles::after { background-size: 60px 60px, 100px 100px; opacity: 0.4; animation: cyberFloatInverse 15s linear infinite; }
+      @keyframes cyberFloat { 0% { transform: translate(0,0) rotate(0deg); opacity: 0.6; } 50% { opacity: 0.9; } 100% { transform: translate(-40px,-80px) rotate(3deg); opacity: 0.6; } }
+      @keyframes cyberFloatInverse { 0% { transform: translate(0,0) rotate(0deg); } 100% { transform: translate(30px,-60px) rotate(-3deg); } }
+
+      /* HANDLER */
+      .handler-navbar { position: fixed; top: 0; left: 0; right: 0; height: 60px; background: rgba(8,4,14,0.96); z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 2px solid var(--purple-border); box-shadow: 0 4px 20px rgba(0,0,0,0.7); backdrop-filter: blur(10px); }
+      .navbar-left { display: flex; align-items: center; gap: 12px; }
+      .menu-trigger { width: 38px; height: 38px; background: transparent; border: 2px solid var(--cyan-neon); border-radius: 8px; color: var(--cyan-neon); font-size: 1.1rem; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 0 8px var(--cyan-glow); }
+      .nav-title { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 1.05rem; letter-spacing: 1px; background: linear-gradient(90deg, #fff, #bba3ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; cursor: pointer; }
+      .vault-pill { display: flex; align-items: center; gap: 6px; background: rgba(0,240,255,0.05); padding: 5px 12px; border: 1px solid rgba(0,240,255,0.2); border-radius: 20px; }
+      .vault-pill i { color: var(--cyan-neon); font-size: 0.85rem; filter: drop-shadow(0 0 4px var(--cyan-neon)); }
+      .vault-amount { font-family: 'Orbitron'; font-size: 0.85rem; font-weight: 700; color: #fff; }
+
+      /* DRAWER */
+      .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 140; display: none; backdrop-filter: blur(4px); }
+      .drawer-overlay.show { display: block; }
+      .side-drawer { position: fixed; top: 0; left: -270px; width: 270px; height: 100vh; background: var(--panel-bg); z-index: 150; border-right: 3px solid var(--cyan-neon); box-shadow: 5px 0 30px rgba(0,0,0,0.9); padding: 15px 12px 20px; display: flex; flex-direction: column; gap: 12px; transition: left 0.35s cubic-bezier(0.1,0.9,0.2,1); overflow-y: auto; }
+      .side-drawer.open { left: 0; }
+
+      .user-identity-zone { display: flex; align-items: center; gap: 12px; padding: 4px; }
+      .user-avatar-glow { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--cyan-neon); box-shadow: 0 0 10px var(--cyan-glow); display: flex; align-items: center; justify-content: center; color: var(--cyan-neon); font-size: 1.15rem; background: rgba(0,240,255,0.05); }
+      .user-profile-name { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 1.1rem; color: #fff; }
+
+      .money-vault-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .vault-box { background: var(--item-bg); border-radius: 8px; padding: 12px 6px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+      .vault-box i { font-size: 1.2rem; }
+      .vault-box .v-title { font-size: 0.65rem; font-weight: 700; color: var(--text-gray); }
+      .vault-box .v-num { font-family: 'Orbitron'; font-size: 1.05rem; font-weight: 900; }
+      .vault-box.primary-wallet { border: 1.5px solid rgba(0,240,255,0.2); }
+      .vault-box.primary-wallet i, .vault-box.primary-wallet .v-num { color: var(--cyan-neon); text-shadow: 0 0 8px var(--cyan-glow); }
+      .vault-box.bonus-wallet { border: 1.5px solid rgba(255,0,160,0.2); }
+      .vault-box.bonus-wallet i, .vault-box.bonus-wallet .v-num { color: var(--magenta-neon); text-shadow: 0 0 8px var(--magenta-glow); }
+
+      /* NAV DRAWER */
+      .nav-dropdown-wrapper { display: flex; flex-direction: column; width: 100%; }
+      .nav-dropdown-trigger { width: 100%; padding: 12px; background: #150d21; border-radius: 8px; border: 1px solid var(--purple-border); display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+      .trigger-left-block { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 0.85rem; }
+      .trigger-left-block i { color: var(--cyan-neon); }
+      .nav-dropdown-trigger .arrow-icon { color: var(--magenta-neon); font-size: 0.75rem; transition: transform 0.3s; }
+      .nav-dropdown-wrapper.open .nav-dropdown-trigger .arrow-icon { transform: rotate(180deg); }
+      .dropdown-slidable-menu { max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(0,1,0,1); display: flex; flex-direction: column; gap: 8px; }
+      .nav-dropdown-wrapper.open .dropdown-slidable-menu { max-height: 2000px; transition: max-height 0.5s cubic-bezier(1,0,1,0); margin-top: 8px; }
+
+      .sub-accordion { display: flex; flex-direction: column; width: 100%; }
+      .sub-acc-header { width: 100%; padding: 10px; background: var(--item-bg); border: 1px solid rgba(255,255,255,0.01); border-radius: 8px; display: flex; align-items: center; justify-content: space-between; color: rgba(255,255,255,0.85); font-size: 0.88rem; font-weight: 600; cursor: pointer; }
+      .sub-acc-header-left { display: flex; align-items: center; gap: 10px; }
+      .circle-box { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--cyan-neon); box-shadow: 0 0 8px var(--cyan-glow); color: var(--cyan-neon); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; background: rgba(0,240,255,0.03); }
+      .sub-acc-header i.indicator-arrow { font-size: 0.7rem; color: rgba(255,255,255,0.3); transition: transform 0.3s; }
+      .sub-accordion.active .sub-acc-header { border-color: rgba(0,240,255,0.25); background: rgba(0,240,255,0.01); }
+      .sub-accordion.active .sub-acc-header i.indicator-arrow { transform: rotate(180deg); color: var(--cyan-neon); }
+      .sub-acc-content { max-height: 0; overflow: hidden; transition: max-height 0.3s cubic-bezier(0,1,0,1); display: flex; flex-direction: column; gap: 6px; padding-left: 6px; }
+      .sub-accordion.active .sub-acc-content { max-height: 500px; transition: max-height 0.3s cubic-bezier(1,0,1,0); margin-top: 6px; }
+
+      .leaf-item { width: 100%; padding: 10px; background: #130a1f; border: 1px solid rgba(0,240,255,0.15); border-radius: 8px; display: flex; align-items: center; justify-content: space-between; color: rgba(255,255,255,0.75); font-size: 0.85rem; font-weight: 600; text-decoration: none; cursor: pointer; }
+      .leaf-item-left { display: flex; align-items: center; gap: 10px; }
+      .leaf-item:active, .leaf-item.active-filter { border-color: var(--cyan-neon); background: rgba(0,240,255,0.08); color: #fff; }
+      .leaf-item::after { content: '→'; font-size: 0.85rem; color: rgba(255,255,255,0.25); }
+
+      .logout-action-box { margin-top: auto; padding: 12px; background: rgba(255,0,80,0.02); border: 1.5px solid rgba(255,0,80,0.2); border-radius: 8px; display: flex; align-items: center; gap: 12px; color: #ff527b; font-weight: 700; font-size: 0.88rem; cursor: pointer; flex-shrink: 0; }
+      .logout-action-box i { width: 30px; height: 30px; border-radius: 8px; background: rgba(255,0,80,0.05); border: 1px solid rgba(255,0,80,0.25); color: #ff0050; display: flex; align-items: center; justify-content: center; }
+
+      /* WORKSPACE */
+      .workspace-core { position: relative; z-index: 10; padding: 80px 16px 30px; width: 100%; max-width: 460px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+      .current-section-title { font-family: 'Orbitron'; font-size: 0.95rem; font-weight: 900; color: var(--cyan-neon); letter-spacing: 2px; text-transform: uppercase; border-left: 3px solid var(--magenta-neon); padding-left: 10px; margin-bottom: 4px; }
+      .cards-grid-layout { display: flex; flex-direction: column; gap: 16px; width: 100%; }
+
+      /* ============================================================
+         CARDS — ESTILO CAPTURAS (imagen + nombre/precio + selector)
+         ============================================================ */
+      .product-cyber-card {
+        background: #0a0514;
+        border: 1.5px solid #1a0d2e;
+        border-radius: 16px;
+        overflow: hidden;
+        position: relative;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+      }
+      .product-cyber-card::before { content: ''; position: absolute; top: 0; left: 0; width: 14px; height: 14px; border-top: 2px solid var(--cyan-neon); border-left: 2px solid var(--cyan-neon); z-index: 2; }
+      .product-cyber-card::after { content: ''; position: absolute; bottom: 0; right: 0; width: 14px; height: 14px; border-bottom: 2px solid var(--magenta-neon); border-right: 2px solid var(--magenta-neon); z-index: 2; }
+
+      .card-banner-img { width: 100%; height: 180px; object-fit: cover; border-bottom: 1px solid #1a0d2e; display: block; background: #130a22; }
+
+      .card-body-details { padding: 14px 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+      /* Fila nombre + precio */
+      .card-title-price-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+      .card-product-name { font-family: 'Orbitron'; font-weight: 700; font-size: 1rem; color: var(--green-neon); text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 0 8px rgba(57,255,20,0.3); }
+      .card-price-block { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
+      .card-price-main { font-family: 'Orbitron'; font-size: 1.1rem; font-weight: 900; color: #fff; }
+      .card-price-old { font-family: 'Orbitron'; font-size: 0.7rem; color: var(--danger); text-decoration: line-through; }
+
+      .card-description { font-size: 0.82rem; color: var(--text-gray); line-height: 1.4; }
+
+      /* Selector de días estilo captura */
+      .card-days-selector {
+        position: relative;
+        background: #0e0720;
+        border: 1px solid #2a1545;
+        border-radius: 8px;
+        padding: 0;
+        overflow: hidden;
+      }
+      .card-days-selector select {
+        width: 100%; padding: 11px 36px 11px 14px;
+        background: transparent; border: none; outline: none;
+        color: #fff; font-size: 0.9rem; font-weight: 700;
+        font-family: 'Rajdhani', sans-serif;
+        cursor: pointer; appearance: none; -webkit-appearance: none;
+      }
+      .card-days-selector::after { content: '▾'; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--green-neon); pointer-events: none; font-size: 1rem; }
+
+      /* Fila ID + botón comprar */
+      .card-footer-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+      .card-product-id { font-size: 0.68rem; color: rgba(255,255,255,0.2); font-family: monospace; word-break: break-all; flex: 1; }
+
+      .btn-adquirir {
+        background: transparent;
+        border: 1.5px solid var(--cyan-neon);
+        color: var(--cyan-neon);
+        font-family: 'Orbitron'; font-weight: 700; font-size: 0.75rem;
+        padding: 9px 18px; border-radius: 8px; cursor: pointer;
+        transition: all 0.2s; white-space: nowrap;
+        box-shadow: 0 0 8px rgba(0,240,255,0.1);
+        flex-shrink: 0;
+      }
+      .btn-adquirir:active { transform: scale(0.95); background: var(--cyan-neon); color: #000; box-shadow: 0 0 15px var(--cyan-neon); }
+      .btn-adquirir.sin-stock { border-color: #444; color: #555; cursor: not-allowed; box-shadow: none; }
+      .btn-adquirir.sin-stock:active { transform: none; background: transparent; }
+
+      .stock-badge { font-size: 0.7rem; font-weight: 700; color: var(--danger); font-family: 'Orbitron'; }
+
+      /* ============================================================
+         MODAL GLOBAL
+         ============================================================ */
+      .cyber-modal-container { position: fixed; inset: 0; background: rgba(4,1,8,0.94); z-index: 300; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(6px); }
+      .cyber-modal-container.show { display: flex; }
+      .modal-frame { background: var(--panel-bg); border: 2px solid var(--purple-border); border-radius: 16px; padding: 22px; width: 100%; max-width: 380px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); position: relative; display: flex; flex-direction: column; gap: 14px; }
+      .modal-frame::before { content:''; position:absolute; top:0; left:0; width:14px; height:14px; border-top:2px solid var(--cyan-neon); border-left:2px solid var(--cyan-neon); }
+      .modal-frame::after { content:''; position:absolute; bottom:0; right:0; width:14px; height:14px; border-bottom:2px solid var(--magenta-neon); border-right:2px solid var(--magenta-neon); }
+
+      .modal-product-img { width: 100%; height: 160px; object-fit: cover; border-radius: 10px; border: 1px solid var(--purple-border); }
+      .modal-icon-center { font-size: 2.8rem; text-align: center; margin: 4px 0; }
+      .modal-icon-center.success { color: var(--success); filter: drop-shadow(0 0 8px var(--success)); }
+      .modal-icon-center.error { color: var(--danger); filter: drop-shadow(0 0 8px var(--danger)); }
+      .modal-icon-center.confirm { color: var(--gold); filter: drop-shadow(0 0 8px var(--gold)); }
+      .modal-title-main { font-family: 'Orbitron'; font-weight: 900; font-size: 1.15rem; text-align: center; letter-spacing: 1px; }
+      .modal-subtitle { font-size: 0.85rem; color: var(--text-gray); text-align: center; }
+
+      .order-receipt-box { background: #120a1c; border: 1px dashed var(--purple-border); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 6px; font-size: 0.88rem; }
+      .receipt-item-row { display: flex; justify-content: space-between; }
+      .receipt-item-row span:first-child { color: var(--text-gray); font-weight: 600; }
+      .receipt-item-row span:last-child { font-weight: 700; color: #fff; }
+
+      /* Key entregada box */
+      .key-delivery-box { background: rgba(0,240,255,0.04); border: 1px solid rgba(0,240,255,0.3); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+      .key-label { font-family: 'Orbitron'; font-size: 0.7rem; color: var(--cyan-neon); letter-spacing: 2px; }
+      .key-value-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+      .key-text { font-family: monospace; font-size: 0.88rem; color: #fff; word-break: break-all; flex: 1; }
+      .btn-copy-key { background: rgba(0,240,255,0.1); border: 1px solid var(--cyan-neon); color: var(--cyan-neon); width: 34px; height: 34px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; font-size: 0.85rem; transition: all 0.2s; }
+      .btn-copy-key:active { background: var(--cyan-neon); color: #000; }
+      .key-copied-hint { font-size: 0.72rem; color: var(--success); display: none; }
+      .key-copied-hint.show { display: block; }
+
+      .btn-modal-action { width: 100%; padding: 13px; border-radius: 10px; border: none; font-family: 'Orbitron'; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: transform 0.2s; }
+      .btn-modal-action.primary { background: var(--cyan-neon); color: #000; box-shadow: 0 0 10px var(--cyan-glow); }
+      .btn-modal-action.danger { background: var(--danger); color: #fff; }
+      .btn-modal-action.ghost { background: transparent; border: 1.5px solid rgba(255,0,160,0.4); color: var(--magenta-neon); }
+      .btn-modal-action:active { transform: scale(0.96); }
+
+      .no-products-alert { font-size: 0.9rem; color: var(--text-gray); text-align: center; padding: 30px 10px; width: 100%; background: rgba(255,255,255,0.01); border-radius: 8px; border: 1px dashed var(--purple-border); }
+
+      /* ============================================================
+         SECCIÓN DE PERFIL EMBEBIDA
+         ============================================================ */
+      .perfil-section { display: none; flex-direction: column; gap: 16px; width: 100%; }
+      .perfil-section.active { display: flex; }
+
+      .profile-card-main {
+        background: rgba(13,8,20,0.9); border: 2px solid var(--purple-border);
+        border-radius: 14px; padding: 20px 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        position: relative;
+      }
+      .profile-card-main::before { content:''; position:absolute; top:0; left:0; width:14px; height:14px; border-top:2px solid var(--cyan-neon); border-left:2px solid var(--cyan-neon); }
+      .profile-card-main::after { content:''; position:absolute; bottom:0; right:0; width:14px; height:14px; border-bottom:2px solid var(--magenta-neon); border-right:2px solid var(--magenta-neon); }
+
+      .profile-header-zone { display: flex; align-items: center; gap: 16px; border-bottom: 1px solid var(--purple-border); padding-bottom: 16px; margin-bottom: 16px; }
+      .profile-avatar-circle { width: 62px; height: 62px; border-radius: 50%; background: #dfe5e7; color: #9aa5a9; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; overflow: hidden; position: relative; border: 2px solid var(--purple-border); flex-shrink: 0; }
+      .profile-avatar-circle i { position: absolute; bottom: -2px; }
+      .profile-username-row { display: flex; align-items: center; gap: 6px; }
+      .profile-username-text { font-family: 'Orbitron'; font-weight: 900; font-size: 1.3rem; color: #fff; }
+      .verified-check { color: #0095f6; font-size: 1.1rem; cursor: pointer; filter: drop-shadow(0 0 5px rgba(0,149,246,0.7)); }
+
+      .credentials-box { background: rgba(17,9,27,0.6); border: 1px solid var(--purple-border); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 11px; }
+      .cred-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; }
+      .cred-label { color: var(--text-gray); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+      .cred-label i { width: 16px; text-align: center; }
+      .cred-value { font-weight: 700; color: #fff; text-align: right; max-width: 55%; word-break: break-word; }
+      .box-sep { border-top: 1px solid rgba(255,255,255,0.05); }
+      .pass-wrap { display: flex; align-items: center; gap: 8px; }
+      .toggle-pass-btn { background: transparent; border: none; color: var(--cyan-neon); cursor: pointer; padding: 2px; }
+
+      /* Rango badge */
+      .rango-display-box { display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); border: 1px solid var(--purple-border); border-radius: 8px; padding: 10px 14px; margin-top: 4px; }
+      .rango-nombre { font-family: 'Orbitron'; font-size: 0.9rem; font-weight: 900; }
+      .rango-descuento-badge { font-size: 0.72rem; font-weight: 700; background: rgba(0,255,102,0.1); border: 1px solid rgba(0,255,102,0.3); color: var(--success); padding: 3px 8px; border-radius: 6px; font-family: 'Orbitron'; }
+
+      /* Beneficios del rango */
+      .rank-benefits-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+      .rank-benefit-item { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 600; }
+      .benefit-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; flex-shrink: 0; }
+      .benefit-icon.active { background: rgba(0,255,102,0.1); border: 1px solid rgba(0,255,102,0.3); color: var(--success); }
+      .benefit-icon.locked { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.2); }
+      .benefit-text.locked { color: rgba(255,255,255,0.25); }
+
+      /* Gold member text */
+      .gold-member-text { font-family: 'Orbitron'; font-weight: 900; font-size: 0.85rem; letter-spacing: 1px; text-align: center; background: linear-gradient(90deg, #ffe066, #f5b041, #f4d03f, #ffe066); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: shineGold 3s linear infinite; margin-top: 4px; }
+      @keyframes shineGold { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
+
+      /* Historiales */
+      .history-title-bar { font-family: 'Orbitron'; font-size: 0.9rem; font-weight: 700; color: var(--cyan-neon); display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(0,240,255,0.1); padding-bottom: 8px; margin-top: 18px; margin-bottom: 10px; }
+      .history-title-bar.recargas { color: var(--magenta-neon); border-bottom-color: rgba(255,0,160,0.1); }
+      .history-list { display: flex; flex-direction: column; gap: 10px; }
+      .history-item { background: var(--item-bg); border: 1px solid var(--purple-border); border-radius: 8px; padding: 12px; cursor: pointer; }
+      .history-item-summary { display: flex; justify-content: space-between; align-items: center; }
+      .hi-title { font-weight: 700; font-size: 0.9rem; }
+      .hi-date { font-size: 0.73rem; color: var(--text-gray); margin-top: 2px; }
+      .hi-price { font-family: 'Orbitron'; font-size: 0.88rem; font-weight: 700; }
+      .hi-price.neg { color: var(--magenta-neon); }
+      .hi-price.pos { color: var(--success); }
+      .hi-details { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; font-size: 0.82rem; color: #c3bcce; border-top: 1px dashed transparent; }
+      .history-item.open .hi-details { max-height: 200px; margin-top: 10px; padding-top: 10px; border-top-color: rgba(255,255,255,0.08); }
+      .btn-receipt-view { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 6px 12px; background: rgba(0,240,255,0.08); border: 1px solid var(--cyan-neon); border-radius: 4px; color: var(--cyan-neon); font-size: 0.75rem; cursor: pointer; }
+
+      /* Receipt modal */
+      .receipt-modal-bg { position: fixed; inset: 0; background: rgba(4,1,8,0.95); z-index: 400; display: none; align-items: center; justify-content: center; padding: 20px; }
+      .receipt-modal-bg.show { display: flex; }
+      .receipt-modal-frame { background: var(--panel-bg); border: 2px solid var(--cyan-neon); border-radius: 12px; padding: 16px; max-width: 100%; max-height: 85vh; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 0 30px var(--cyan-glow); }
+      .receipt-modal-frame img { max-width: 100%; max-height: 65vh; object-fit: contain; border-radius: 6px; }
+      .btn-close-receipt { width: 100%; padding: 10px; background: var(--magenta-neon); border: none; color: #fff; font-family: 'Orbitron'; font-weight: 700; border-radius: 6px; cursor: pointer; }
+
+      /* Toast */
+      .saku-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--panel-bg); border: 1px solid #0095f6; padding: 12px 24px; border-radius: 8px; box-shadow: 0 0 15px rgba(0,149,246,0.4); z-index: 500; font-family: 'Orbitron'; font-size: 0.8rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; pointer-events: none; opacity: 0; transition: transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275), opacity 0.3s; white-space: nowrap; }
+      .saku-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+      /* Sección Configuraciones */
+      .config-section { display: none; flex-direction: column; gap: 14px; }
+      .config-section.active { display: flex; }
+      .config-card { background: var(--item-bg); border: 1px solid var(--purple-border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+      .config-row { display: flex; justify-content: space-between; align-items: center; }
+      .config-label { font-size: 0.9rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+      .config-label i { color: var(--cyan-neon); width: 18px; text-align: center; }
+      .toggle-switch { position: relative; width: 46px; height: 24px; }
+      .toggle-switch input { opacity: 0; width: 0; height: 0; }
+      .toggle-slider { position: absolute; inset: 0; background: #2a1545; border-radius: 24px; cursor: pointer; transition: 0.3s; }
+      .toggle-slider::before { content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.3s; }
+      input:checked + .toggle-slider { background: var(--cyan-neon); }
+      input:checked + .toggle-slider::before { transform: translateX(22px); }
+
+      /* ============================================================
+         MINI-MODAL BOTS (por si se necesita)
+         ============================================================ */
+      .bots-mini-modal { position: fixed; inset: 0; background: rgba(4,1,8,0.9); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+      .bots-mini-modal.show { display: flex; }
+      .bots-modal-frame { background: var(--panel-bg); border: 2px solid var(--cyan-neon); border-radius: 14px; padding: 24px; width: 100%; max-width: 300px; display: flex; flex-direction: column; gap: 14px; }
+      .bots-modal-title { font-family: 'Orbitron'; font-size: 1rem; font-weight: 900; text-align: center; color: var(--cyan-neon); }
+      .btn-bot-link { width: 100%; padding: 14px; border-radius: 10px; border: none; font-family: 'Orbitron'; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; transition: all 0.2s; }
+      .btn-bot-link.whatsapp { background: #25d366; color: #fff; }
+      .btn-bot-link.telegram { background: #229ed9; color: #fff; }
+      .btn-bot-link:active { transform: scale(0.96); }
+      .btn-bot-close { background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--text-gray); padding: 10px; border-radius: 8px; font-family: 'Orbitron'; font-size: 0.75rem; cursor: pointer; width: 100%; }
+    </style>
+  </head>
+  <body>
+    <div class="bg-particles"></div>
+    <div class="drawer-overlay" id="overlay"></div>
+
+    <!-- HANDLER FIJO -->
+    <header class="handler-navbar">
+      <div class="navbar-left">
+        <button class="menu-trigger" id="btnOpen"><i class="fas fa-bars"></i></button>
+        <span class="nav-title" onclick="loadSection('home')">SAKU STORE</span>
+      </div>
+      <div class="navbar-right">
+        <div class="vault-pill">
+          <i class="fas fa-coins"></i>
+          <span class="vault-amount" id="topNavBalance">$0.00</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- DRAWER LATERAL -->
+    <nav class="side-drawer" id="drawer">
+      <div class="user-identity-zone">
+        <div class="user-avatar-glow"><i class="fas fa-robot"></i></div>
+        <span class="user-profile-name" id="drawerUsername">Cargando...</span>
+      </div>
+
+      <div class="money-vault-row">
+        <div class="vault-box primary-wallet">
+          <i class="fas fa-wallet"></i>
+          <span class="v-title">PRINCIPAL</span>
+          <span class="v-num" id="walletPrincipal">$0.00</span>
+        </div>
+        <div class="vault-box bonus-wallet">
+          <i class="fas fa-gift"></i>
+          <span class="v-title">BONUS</span>
+          <span class="v-num" id="walletBonus">$0.00</span>
+        </div>
+      </div>
+
+      <div class="nav-dropdown-wrapper open" id="navDropdown">
+        <div class="nav-dropdown-trigger" onclick="toggleNavigationMenu()">
+          <div class="trigger-left-block"><i class="fas fa-compass"></i> NAVEGACIÓN</div>
+          <i class="fas fa-chevron-down arrow-icon"></i>
+        </div>
+
+        <div class="dropdown-slidable-menu">
+
+          <!-- PERFIL -->
+          <div class="sub-accordion">
+            <div class="sub-acc-header">
+              <div class="sub-acc-header-left">
+                <div class="circle-box"><i class="fas fa-user-shield"></i></div>
+                <span>Perfil</span>
+              </div>
+              <i class="fas fa-chevron-down indicator-arrow"></i>
+            </div>
+            <div class="sub-acc-content">
+              <a class="leaf-item" onclick="loadSection('perfil', this)">
+                <div class="leaf-item-left">
+                  <div class="circle-box" style="width:30px;height:30px;font-size:0.75rem;"><i class="fas fa-id-card"></i></div>
+                  <span>Mi Cuenta</span>
+                </div>
+              </a>
+            </div>
+          </div>
+
+          <!-- KEYS -->
+          <div class="sub-accordion">
+            <div class="sub-acc-header">
+              <div class="sub-acc-header-left">
+                <div class="circle-box"><i class="fas fa-key"></i></div>
+                <span>Zona de Keys</span>
+              </div>
+              <i class="fas fa-chevron-down indicator-arrow"></i>
+            </div>
+            <div class="sub-acc-content">
+              <a class="leaf-item" onclick="loadSection('root', this)">
+                <div class="leaf-item-left">
+                  <div class="circle-box" style="width:30px;height:30px;font-size:0.75rem;"><i class="fas fa-terminal"></i></div>
+                  <span>Root</span>
+                </div>
+              </a>
+              <a class="leaf-item" onclick="loadSection('no_root', this)">
+                <div class="leaf-item-left">
+                  <div class="circle-box" style="width:30px;height:30px;font-size:0.75rem;"><i class="fas fa-mobile-alt"></i></div>
+                  <span>No Root</span>
+                </div>
+              </a>
+            </div>
+          </div>
+
+          <!-- PROXYS -->
+          <div class="sub-accordion">
+            <div class="sub-acc-header">
+              <div class="sub-acc-header-left">
+                <div class="circle-box"><i class="fas fa-server"></i></div>
+                <span>Proxys</span>
+              </div>
+              <i class="fas fa-chevron-down indicator-arrow"></i>
+            </div>
+            <div class="sub-acc-content">
+              <a class="leaf-item" onclick="loadSection('proxy_android', this)">
+                <div class="leaf-item-left">
+                  <div class="circle-box" style="width:30px;height:30px;font-size:0.75rem;"><i class="fab fa-android"></i></div>
+                  <span>Android</span>
+                </div>
+              </a>
+              <a class="leaf-item" onclick="loadSection('proxy_ios', this)">
+                <div class="leaf-item-left">
+                  <div class="circle-box" style="width:30px;height:30px;font-size:0.75rem;"><i class="fab fa-apple"></i></div>
+                  <span>iPhone / iOS</span>
+                </div>
+              </a>
+            </div>
+          </div>
+
+          <!-- RECARGAS -->
+          <div class="sub-accordion">
+            <div class="sub-acc-header">
+              <div class="sub-acc-header-left">
+                <div class="circle-box"><i class="fas fa-plus-circle"></i></div>
+                <span>Recargas</span>
+              </div>
+              <i class="fas fa-chevron-down indicator-arrow"></i>
+            </div>
+            <div class="sub-acc-content">
+              <a class="leaf-item" onclick="irA('recargas.html')">
+                <div class="leaf-item-left">
+                  <div class="circle-box" style="width:30px;height:30px;font-size:0.75rem;"><i class="fas fa-wallet"></i></div>
+                  <span>Recargar Saldo</span>
+                </div>
+              </a>
+            </div>
+          </div>
+
+          <!-- CHAT -->
+          <div class="sub-accordion">
+            <div class="sub-acc-header">
+              <div class="sub-acc-header-left">
+                <div class="circle-box"><i class="fas fa-comments"></i></div>
+                <span>Chat</span>
+              </div>
+              <i class="fas fa-chevron-down indicator-arrow"></i>
+            </div>
+            <div class="sub-acc-content">
+              <a class="leaf-item" onclick="irA('chat.html')">
+                <div class="leaf-item-left">
+                  <div class="circle-box" style="width:30px;height:30px;font-size:0.75rem;"><i class="fas fa-comment-dots"></i></div>
+                  <span>Abrir Chat</span>
+                </div>
+              </a>
+            </div>
+          </div>
+
+          <!-- BOTS -->
+          <div class="sub-accordion">
+            <div class="sub-acc-header">
+              <div class="sub-acc-header-left">
+                <div class="circle-box"><i class="fas fa-robot"></i></div>
+                <span>Bots</span>
+              </div>
+              <i class="fas fa-chevron-down indicator-arrow"></i>
+            </div>
+            <div class="sub-acc-content">
+              <a class="leaf-item" onclick="irA('bot.html')">
+                <div class="leaf-item-left">
+                  <div class="circle-box" style="width:30px;height:30px;font-size:0.75rem;"><i class="fas fa-paper-plane"></i></div>
+                  <span>Panel de Bots</span>
+                </div>
+              </a>
+            </div>
+          </div>
+
+          <!-- CONFIGURACIONES -->
+          <div class="sub-accordion">
+            <div class="sub-acc-header">
+              <div class="sub-acc-header-left">
+                <div class="circle-box"><i class="fas fa-cog"></i></div>
+                <span>Configuraciones</span>
+              </div>
+              <i class="fas fa-chevron-down indicator-arrow"></i>
+            </div>
+            <div class="sub-acc-content">
+              <a class="leaf-item" onclick="loadSection('config', this)">
+                <div class="leaf-item-left">
+                  <div class="circle-box" style="width:30px;height:30px;font-size:0.75rem;"><i class="fas fa-sliders-h"></i></div>
+                  <span>Ajustes</span>
+                </div>
+              </a>
+            </div>
+          </div>
+
+          <!-- RANKING -->
+          <div class="sub-accordion">
+            <div class="sub-acc-header">
+              <div class="sub-acc-header-left">
+                <div class="circle-box"><i class="fas fa-trophy"></i></div>
+                <span>Ranking</span>
+              </div>
+              <i class="fas fa-chevron-down indicator-arrow"></i>
+            </div>
+            <div class="sub-acc-content">
+              <a class="leaf-item" onclick="loadSection('perfil', this)">
+                <div class="leaf-item-left">
+                  <div class="circle-box" style="width:30px;height:30px;font-size:0.75rem;"><i class="fas fa-medal"></i></div>
+                  <span>Mi Rango</span>
+                </div>
+              </a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="logout-action-box" onclick="cerrarSesionSaku()">
+        <i class="fas fa-sign-out-alt"></i> CERRAR SESIÓN
+      </div>
+    </nav>
+
+    <!-- WORKSPACE PRINCIPAL -->
+    <main class="workspace-core">
+      <h2 class="current-section-title" id="sectionCoreTitle">SERVICIOS DISPONIBLES</h2>
+
+      <!-- CATÁLOGO -->
+      <div id="catalogSection">
+        <div class="cards-grid-layout" id="catalogCardsContainer">
+          <p class="no-products-alert">Conectando con el servidor...</p>
+        </div>
+      </div>
+
+      <!-- PERFIL EMBEBIDO -->
+      <div class="perfil-section" id="perfilSection">
+
+        <div class="profile-card-main" id="mainProfileCard">
+          <div class="profile-header-zone">
+            <div class="profile-avatar-circle">
+              <i class="fas fa-user"></i>
+            </div>
+            <div>
+              <div class="profile-username-row">
+                <span class="profile-username-text" id="perfUsername">Usuario</span>
+                <i class="fas fa-circle-check verified-check" id="verifiedCheckIcon" style="display:none;" onclick="mostrarToast('✅ Cuenta verificada por Saku Store')"></i>
+              </div>
+              <div style="font-size:0.75rem; color:var(--text-gray); margin-top:3px;" id="perfRangoSmall">--</div>
+            </div>
+          </div>
+
+          <div class="credentials-box">
+            <div class="cred-row">
+              <span class="cred-label"><i class="fas fa-address-book"></i> Contacto:</span>
+              <span class="cred-value" id="perfContacto">...</span>
+            </div>
+            <div class="cred-row">
+              <span class="cred-label"><i class="fas fa-lock"></i> Contraseña:</span>
+              <div class="pass-wrap">
+                <span class="cred-value" id="perfPassword" data-raw="">••••••••</span>
+                <button class="toggle-pass-btn" onclick="togglePass()"><i class="fas fa-eye" id="passIcon"></i></button>
+              </div>
+            </div>
+            <div class="box-sep"></div>
+            <div class="cred-row">
+              <span class="cred-label"><i class="fas fa-signature"></i> Nombre:</span>
+              <span class="cred-value" id="perfNombreReal">Cargando...</span>
+            </div>
+            <div class="box-sep"></div>
+            <div class="cred-row">
+              <span class="cred-label"><i class="fas fa-calendar-alt"></i> Registro:</span>
+              <span class="cred-value" id="perfFechaRegistro">--</span>
+            </div>
+            <div class="box-sep"></div>
+            <div class="cred-row">
+              <span class="cred-label"><i class="fas fa-trophy"></i> Rango:</span>
+              <span class="cred-value" id="perfRango" style="font-family:'Orbitron'; font-size:0.82rem;">--</span>
+            </div>
+          </div>
+
+          <!-- RANGO CARD -->
+          <div class="rango-display-box" id="rangoDisplayBox" style="margin-top:14px;">
+            <span class="rango-nombre" id="rangoNombreDisplay">--</span>
+            <span class="rango-descuento-badge" id="rangoDescuentoBadge">0% desc.</span>
+          </div>
+
+          <!-- BENEFICIOS -->
+          <div class="rank-benefits-list" id="rankBenefitsList"></div>
+
+          <div class="gold-member-text" style="margin-top:16px;">MIEMBRO WEB SAKU STORE</div>
+
+          <!-- HISTORIAL COMPRAS -->
+          <div class="history-title-bar"><i class="fas fa-shopping-bag"></i> COMPRAS DETALLADAS</div>
+          <div class="history-list" id="histCompras">
+            <p style="font-size:0.82rem;color:var(--text-gray);text-align:center;padding:10px;">Sin registros de compras.</p>
+          </div>
+
+          <!-- HISTORIAL RECARGAS -->
+          <div class="history-title-bar recargas"><i class="fas fa-wallet"></i> HISTORIAL DE RECARGAS</div>
+          <div class="history-list" id="histRecargas">
+            <p style="font-size:0.82rem;color:var(--text-gray);text-align:center;padding:10px;">Sin registros de recargas.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONFIGURACIONES EMBEBIDAS -->
+      <div class="config-section" id="configSection">
+        <div class="config-card">
+          <div style="font-family:'Orbitron';font-size:0.85rem;font-weight:900;color:var(--cyan-neon);letter-spacing:1px;margin-bottom:4px;">AJUSTES DE CUENTA</div>
+          <div class="config-row">
+            <span class="config-label"><i class="fas fa-bell"></i> Notificaciones</span>
+            <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="box-sep"></div>
+          <div class="config-row">
+            <span class="config-label"><i class="fas fa-moon"></i> Tema Oscuro</span>
+            <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="box-sep"></div>
+          <div class="config-row">
+            <span class="config-label"><i class="fas fa-eye-slash"></i> Ocultar Saldo</span>
+            <label class="toggle-switch"><input type="checkbox" onchange="toggleOcultarSaldo(this)"><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+        <div class="config-card">
+          <div style="font-family:'Orbitron';font-size:0.85rem;font-weight:900;color:var(--magenta-neon);letter-spacing:1px;margin-bottom:4px;">SEGURIDAD</div>
+          <div class="config-row">
+            <span class="config-label"><i class="fas fa-shield-alt"></i> Verificación activa</span>
+            <span style="font-size:0.8rem;color:var(--success);font-weight:700;" id="configVerifStatus">--</span>
+          </div>
+          <div class="box-sep"></div>
+          <div class="config-row">
+            <span class="config-label"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</span>
+            <button onclick="cerrarSesionSaku()" style="background:rgba(255,0,80,0.1);border:1px solid rgba(255,0,80,0.3);color:#ff527b;padding:6px 14px;border-radius:6px;font-family:'Orbitron';font-size:0.72rem;font-weight:700;cursor:pointer;">SALIR</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- MODAL GLOBAL COMPRAS -->
+    <div class="cyber-modal-container" id="sakuGlobalModal">
+      <div class="modal-frame" id="modalFrameContent"></div>
+    </div>
+
+    <!-- RECEIPT MODAL -->
+    <div class="receipt-modal-bg" id="receiptModal">
+      <div class="receipt-modal-frame">
+        <h3 style="font-family:'Orbitron';font-size:0.9rem;color:var(--cyan-neon);text-align:center;">COMPROBANTE DE RECARGA</h3>
+        <img id="receiptImage" src="" alt="Comprobante">
+        <button class="btn-close-receipt" onclick="cerrarReceiptModal()">CERRAR VISOR</button>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="saku-toast" id="sakuToast"></div>
+
+    <script>
+      /* =====================================================
+         FIREBASE INIT
+         ===================================================== */
+      const firebaseConfig = {
+        apiKey: "AIzaSyB-J-8BUFhnDcZIEvYRNq6UAFaPcgxuAtE",
+        authDomain: "saku-store.firebaseapp.com",
+        databaseURL: "https://saku-store-default-rtdb.firebaseio.com",
+        projectId: "saku-store",
+        storageBucket: "saku-store.firebasestorage.app",
+        messagingSenderId: "815286002143",
+        appId: "1:815286002143:web:60e7c7770da491a6da646a",
+        measurementId: "G-W9EHSXZJVT"
+      };
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+      const rtdb = firebase.database();
+
+      /* =====================================================
+         ESTADO GLOBAL
+         ===================================================== */
+      let currentUserCache = null;
+      let currentDiscountMultiplier = 1;
+      let fullProductsDatabase = [];
+      let activeCategoryFilter = "home";
+      let saldoOculto = false;
+
+      const TABLA_DESCUENTOS = {
+        cliente_verificado: 0,
+        bronce: 3,
+        plata: 5,
+        oro: 8,
+        diamante: 12,
+        socio: 15,
+        nivel_supremo: 20,
+        creador: 30,
+        sakurita: 50
+      };
+
+      const RANGOS_INFO = {
+        cliente_verificado: { nombre: "Cliente Verificado", color: "#00f0ff", desc: 0 },
+        bronce:             { nombre: "Bronce 🥉",           color: "#cd7f32", desc: 3 },
+        plata:              { nombre: "Plata 🥈",            color: "#c0c0c0", desc: 5 },
+        oro:                { nombre: "Oro 🥇",              color: "#ffd700", desc: 8 },
+        diamante:           { nombre: "Diamante 💎",         color: "#00bfff", desc: 12 },
+        socio:              { nombre: "Socio / Afiliado",    color: "#a855f7", desc: 15 },
+        nivel_supremo:      { nombre: "Nivel Supremo 👑",    color: "#ff00ea", desc: 20 },
+        creador:            { nombre: "Creador / Dev",       color: "#ff00a0", desc: 30 },
+        sakurita:           { nombre: "🌸 Sakurita (Owner)", color: "#ff80bf", desc: 50 }
+      };
+
+      const BENEFICIOS_RANGOS = [
+        { key: "descuento",   texto: "Descuento en productos",     desde: "cliente_verificado" },
+        { key: "prioridad",   texto: "Atención prioritaria",       desde: "bronce" },
+        { key: "acceso_vip",  texto: "Acceso a productos VIP",     desde: "oro" },
+        { key: "bonus_extra", texto: "Bonus extra en recargas",    desde: "diamante" },
+        { key: "soporte_24",  texto: "Soporte 24/7 dedicado",      desde: "socio" },
+        { key: "promo_excl",  texto: "Promociones exclusivas",     desde: "nivel_supremo" },
+        { key: "panel_dev",   texto: "Acceso al panel Dev",        desde: "creador" },
+        { key: "owner_ctrl",  texto: "Control total de tienda",    desde: "sakurita" }
+      ];
+
+      const ORDEN_RANGOS = ["cliente_verificado","bronce","plata","oro","diamante","socio","nivel_supremo","creador","sakurita"];
+
+      /* =====================================================
+         DRAWER
+         ===================================================== */
+      const btnOpen = document.getElementById('btnOpen');
+      const drawer  = document.getElementById('drawer');
+      const overlay = document.getElementById('overlay');
+      const navDropdown = document.getElementById('navDropdown');
+
+      function toggleDrawer() { drawer.classList.toggle('open'); overlay.classList.toggle('show'); }
+      btnOpen.addEventListener('click', toggleDrawer);
+      overlay.addEventListener('click', toggleDrawer);
+
+      function toggleNavigationMenu() { navDropdown.classList.toggle('open'); }
+
+      document.querySelectorAll('.sub-acc-header').forEach(header => {
+        header.addEventListener('click', () => {
+          const acc = header.parentElement;
+          document.querySelectorAll('.sub-accordion').forEach(i => { if (i !== acc) i.classList.remove('active'); });
+          acc.classList.toggle('active');
+        });
+      });
+
+      /* =====================================================
+         NAVEGACIÓN DE SECCIONES
+         ===================================================== */
+      function loadSection(key, elementBtn = null) {
+        activeCategoryFilter = key;
+        document.querySelectorAll('.leaf-item').forEach(i => i.classList.remove('active-filter'));
+        if (elementBtn) elementBtn.classList.add('active-filter');
+
+        drawer.classList.remove('open');
+        overlay.classList.remove('show');
+
+        const catalogSection  = document.getElementById('catalogSection');
+        const perfilSection   = document.getElementById('perfilSection');
+        const configSection   = document.getElementById('configSection');
+
+        catalogSection.style.display  = 'none';
+        perfilSection.classList.remove('active');
+        configSection.classList.remove('active');
+
+        const tMap = {
+          home: "SERVICIOS DISPONIBLES",
+          root: "ZONA KEYS — ROOT",
+          no_root: "ZONA KEYS — NO ROOT",
+          proxy_android: "PROXYS — ANDROID",
+          proxy_ios: "PROXYS — iPHONE iOS",
+          perfil: "MI PERFIL",
+          config: "CONFIGURACIONES"
+        };
+        document.getElementById('sectionCoreTitle').innerText = tMap[key] || "CATÁLOGO";
+
+        if (key === 'perfil') {
+          perfilSection.classList.add('active');
+          if (currentUserCache) {
+            // Perfil independiente: si falla no rompe el catálogo
+            try { renderizarPerfil(currentUserCache); } catch(e) { console.warn('Error renderPerfil:', e); }
+          }
+        } else if (key === 'config') {
+          configSection.classList.add('active');
+        } else {
+          catalogSection.style.display = 'block';
+          // Catálogo independiente: si falla no rompe el perfil
+          try { renderizarCatalogoFiltrado(); } catch(e) { console.warn('Error renderCatalogo:', e); }
+        }
+      }
+
+      function irA(url) {
+        drawer.classList.remove('open');
+        overlay.classList.remove('show');
+        window.location.href = url;
+      }
+
+      /* =====================================================
+         AUTH & DATOS USUARIO
+         ===================================================== */
+      let authResuelto = false;
+      let snapshotUsuarioActivo = null;
+
+      firebase.auth().onAuthStateChanged((user) => {
+        if (user) {
+          authResuelto = true;
+          escucharDatosUsuario(user.uid);
+        } else {
+          // Solo redirige si ya se resolvió antes (sesión cerrada activamente)
+          // o si Firebase confirma definitivamente que no hay sesión tras la carga inicial
+          if (authResuelto) {
+            window.location.href = "index.html";
+          } else {
+            // Primera carga: espera a que Firebase restaure el token del storage
+            firebase.auth().getRedirectResult().catch(() => {});
+            const unsubscribe = firebase.auth().onAuthStateChanged((userRetry) => {
+              unsubscribe();
+              if (userRetry) {
+                authResuelto = true;
+                escucharDatosUsuario(userRetry.uid);
+              } else if (!authResuelto) {
+                window.location.href = "index.html";
+              }
+            });
+          }
+        }
+      });
+
+      function escucharDatosUsuario(uid) {
+        if (snapshotUsuarioActivo) snapshotUsuarioActivo();
+
+        const authUser = firebase.auth().currentUser;
+        // Ruta correcta: usuarios/clientes/lista/{uid}  (igual que index.html al registrar)
+        const clienteRef = db.collection('usuarios').doc('clientes').collection('lista').doc(uid);
+
+        snapshotUsuarioActivo = clienteRef.onSnapshot((clienteDoc) => {
+          if (!clienteDoc.exists) {
+            // Si no hay doc con uid, intentar con username del authUser como fallback
+            const fallbackUser = (authUser && authUser.displayName) ? authUser.displayName : null;
+            if (fallbackUser && fallbackUser !== uid) {
+              db.collection('usuarios').doc('clientes').collection('lista').doc(fallbackUser)
+                .get().then(doc2 => {
+                  if (doc2.exists) {
+                    _construirCacheYActualizar(uid, authUser, doc2.data(), fallbackUser);
+                  } else {
+                    // Doc no encontrado en ningún lado: UI con valores vacíos pero catálogo sí carga
+                    currentUserCache = { uid, username: fallbackUser || uid, dinero_usd: 0, rango: 'cliente_verificado', verificado: false };
+                    _actualizarUIUsuario(0, 'cliente_verificado', fallbackUser || uid);
+                    cargarCatalogoIndependiente();
+                  }
+                }).catch(() => {
+                  currentUserCache = { uid, username: uid, dinero_usd: 0, rango: 'cliente_verificado', verificado: false };
+                  _actualizarUIUsuario(0, 'cliente_verificado', uid);
+                  cargarCatalogoIndependiente();
+                });
+            } else {
+              currentUserCache = { uid, username: uid, dinero_usd: 0, rango: 'cliente_verificado', verificado: false };
+              _actualizarUIUsuario(0, 'cliente_verificado', uid);
+              cargarCatalogoIndependiente();
+            }
+            return;
+          }
+
+          _construirCacheYActualizar(uid, authUser, clienteDoc.data(), uid);
+        }, (err) => {
+          // Si Firestore falla, el catálogo sigue funcionando con RTDB
+          console.warn('Error al leer perfil Firestore:', err.message);
+          currentUserCache = { uid, username: uid, dinero_usd: 0, rango: 'cliente_verificado', verificado: false };
+          _actualizarUIUsuario(0, 'cliente_verificado', uid);
+          cargarCatalogoIndependiente();
+        });
+      }
+
+      // Construye el cache desde el documento de Firestore y actualiza la UI
+      function _construirCacheYActualizar(uid, authUser, cd, docId) {
+        const username = cd.usuario || cd.username || (authUser && authUser.displayName) || uid;
+        currentUserCache = {
+          uid,
+          username,
+          clienteDocId:    docId,
+          dinero_usd:      cd.dinero_usd      || 0,
+          rango:           cd.rango           || 'cliente_verificado',
+          contacto:        cd.contacto        || '',
+          fecha_registro:  cd.fecha_registro  || cd.fecha_registrostr || '',
+          verificado:      cd.verificado      === true,
+          nombre_completo: cd.nombre_completo || cd.nombre_real || '',
+          total_recargado: cd.total_recargado || 0
+        };
+        _actualizarUIUsuario(currentUserCache.dinero_usd, currentUserCache.rango, username);
+        // Actualizar perfil si está abierto, de forma independiente al catálogo
+        if (activeCategoryFilter === 'perfil') {
+          try { renderizarPerfil(currentUserCache); } catch(e) { console.warn('Error perfil:', e); }
+        }
+      }
+
+      let catalogoInicializado = false;
+
+      function _actualizarUIUsuario(saldo, rangoKey, username) {
+        const pctDesc = TABLA_DESCUENTOS[rangoKey] || 0;
+        currentDiscountMultiplier = (100 - pctDesc) / 100;
+
+        document.getElementById('drawerUsername').innerText    = username;
+        document.getElementById('topNavBalance').innerText     = saldoOculto ? "••••" : `$${parseFloat(saldo).toFixed(2)}`;
+        document.getElementById('walletPrincipal').innerText   = saldoOculto ? "••••" : `$${parseFloat(saldo).toFixed(2)}`;
+        document.getElementById('walletBonus').innerText       = saldoOculto ? "••••" : `$0.00`;
+
+        // Catálogo completamente independiente del perfil
+        cargarCatalogoIndependiente();
+      }
+
+      // ─── CATÁLOGO INDEPENDIENTE (RTDB) ──────────────────────────────────
+      // Desacoplado de Firestore/perfil. Si falla no afecta al perfil ni viceversa.
+      function cargarCatalogoIndependiente() {
+        if (catalogoInicializado) return;
+        catalogoInicializado = true;
+        try {
+          escucharCatalogoProductos();
+        } catch(e) {
+          console.warn('Error al iniciar catálogo:', e);
+          document.getElementById('catalogCardsContainer').innerHTML =
+            '<p class="no-products-alert">Error al conectar con el catálogo. Recarga la página.</p>';
+        }
+      }
+
+      function obtenerRangoPorDinero(gasto) {
+        if (gasto >= 250) return "nivel_supremo";
+        if (gasto >= 100) return "diamante";
+        if (gasto >= 50)  return "oro";
+        if (gasto >= 25)  return "plata";
+        if (gasto >= 10)  return "bronce";
+        return "cliente_verificado";
+      }
+
+      /* =====================================================
+         CATÁLOGO PRODUCTOS
+         ===================================================== */
+      function escucharCatalogoProductos() {
+        if (catalogoInicializado) return;
+        catalogoInicializado = true;
+
+        rtdb.ref('productos').on('value', (snapshot) => {
+          fullProductsDatabase = [];
+          const data = snapshot.val();
+          if (data) {
+            Object.entries(data).forEach(([id, prod]) => {
+              prod.id = id;
+              // Normalizar imagen
+              if (prod.imagen_base64 && !prod.imagen_url) {
+                prod.imagen_url = prod.imagen_base64.startsWith('data:')
+                  ? prod.imagen_base64
+                  : `data:image/jpeg;base64,${prod.imagen_base64}`;
+              }
+              // Normalizar keys_stock
+              if (prod.keys_stock && typeof prod.keys_stock === 'object') {
+                const keysArr = Object.values(prod.keys_stock);
+                prod.keys_disponibles = keysArr;
+                prod.stock = keysArr.length;
+              }
+              fullProductsDatabase.push(prod);
+            });
+          }
+          if (activeCategoryFilter !== 'perfil' && activeCategoryFilter !== 'config') {
+            renderizarCatalogoFiltrado();
+          }
+        });
+      }
+
+      function renderizarCatalogoFiltrado() {
+        const container = document.getElementById('catalogCardsContainer');
+        container.innerHTML = "";
+
+        let lista = [];
+        if (activeCategoryFilter === "home") {
+          // En home mostramos todos los productos, priorizando los de mayor stock
+          lista = [...fullProductsDatabase].sort((a, b) => (b.stock || 0) - (a.stock || 0));
+        } else {
+          lista = fullProductsDatabase.filter(p => p.categoria === activeCategoryFilter);
+        }
+
+        if (lista.length === 0) {
+          container.innerHTML = `<p class="no-products-alert">No hay servicios cargados en este apartado.</p>`;
+          return;
+        }
+        lista.forEach(prod => container.appendChild(generarCard(prod)));
+      }
+
+      /* =====================================================
+         GENERADOR DE CARDS — ESTILO CAPTURAS
+         ===================================================== */
+      function generarCard(p) {
+        const div = document.createElement('div');
+        div.className = "product-cyber-card";
+
+        // Precio base
+        let precioBase = 0;
+        let selectorHtml = "";
+
+        const hayStock = p.tipo !== "key" || !p.keys_disponibles || (Array.isArray(p.keys_disponibles) ? p.keys_disponibles.length > 0 : p.stock > 0);
+
+        if (p.tipo === "key" && p.precios_variaciones) {
+          precioBase = p.precios_variaciones.dia_1 || p.precio || 0;
+          const vars = [];
+          if (p.precios_variaciones.dia_1)    vars.push(`<option value="dia_1" data-raw="${p.precios_variaciones.dia_1}">1 DÍAS</option>`);
+          if (p.precios_variaciones.dia_7)    vars.push(`<option value="dia_7" data-raw="${p.precios_variaciones.dia_7}">7 DÍAS</option>`);
+          if (p.precios_variaciones.dia_15)   vars.push(`<option value="dia_15" data-raw="${p.precios_variaciones.dia_15}">15 DÍAS</option>`);
+          if (p.precios_variaciones.dia_30)   vars.push(`<option value="dia_30" data-raw="${p.precios_variaciones.dia_30}">30 DÍAS</option>`);
+          if (p.precios_variaciones.permanente) vars.push(`<option value="permanente" data-raw="${p.precios_variaciones.permanente}">PERMANENTE</option>`);
+
+          if (vars.length > 0) {
+            selectorHtml = `
+              <div class="card-days-selector">
+                <select id="sel-${p.id}" onchange="actualizarPrecioCard(this,'${p.id}')">
+                  ${vars.join('')}
+                </select>
+              </div>
+            `;
+          }
+        } else {
+          precioBase = p.precio || 0;
+        }
+
+        const precioDesc = precioBase * currentDiscountMultiplier;
+        const tieneDesc  = currentDiscountMultiplier < 1;
+
+        const priceHtml = `
+          <div class="card-price-block" id="priceBlock-${p.id}">
+            ${tieneDesc ? `<span class="card-price-old">$${precioBase.toFixed(2)}</span>` : ''}
+            <span class="card-price-main" data-actual="${precioDesc}">$${precioDesc.toFixed(2)}</span>
+          </div>
+        `;
+
+        const btnHtml = hayStock
+          ? `<button class="btn-adquirir" onclick="procesarIntencionCompra('${p.id}','${p.tipo === 'key' ? 'dia_1' : 'directo'}')">ADQUIRIR</button>`
+          : `<span class="stock-badge"><i class="fas fa-times-circle"></i> SIN STOCK</span>`;
+
+        const imgSrc = p.imagen_url
+          ? p.imagen_url
+          : (p.imagen_base64
+              ? (p.imagen_base64.startsWith('data:') ? p.imagen_base64 : `data:image/jpeg;base64,${p.imagen_base64}`)
+              : 'https://i.imgur.com/v2Z2vX3.png');
+
+        div.innerHTML = `
+          <img src="${imgSrc}" class="card-banner-img" alt="${p.nombre}" onerror="this.src='https://i.imgur.com/v2Z2vX3.png'">
+          <div class="card-body-details">
+            <div class="card-title-price-row">
+              <h3 class="card-product-name">${p.nombre}</h3>
+              ${priceHtml}
+            </div>
+            <p class="card-description">${p.descripcion || 'Servicio disponible en Saku Store.'}</p>
+            ${selectorHtml}
+            <div class="card-footer-row">
+              <span class="card-product-id">ID: ${p.id}</span>
+              ${btnHtml}
+            </div>
+          </div>
+        `;
+        return div;
+      }
+
+      function actualizarPrecioCard(selectElem, productId) {
+        const opt = selectElem.options[selectElem.selectedIndex];
+        const raw = parseFloat(opt.getAttribute('data-raw')) || 0;
+        const desc = raw * currentDiscountMultiplier;
+        const tieneDesc = currentDiscountMultiplier < 1;
+
+        document.getElementById(`priceBlock-${productId}`).innerHTML = `
+          ${tieneDesc ? `<span class="card-price-old">$${raw.toFixed(2)}</span>` : ''}
+          <span class="card-price-main" data-actual="${desc}">$${desc.toFixed(2)}</span>
+        `;
+
+        // Actualizar onclick del botón adquirir
+        const footer = selectElem.closest('.card-body-details').querySelector('.btn-adquirir');
+        if (footer) footer.setAttribute('onclick', `procesarIntencionCompra('${productId}','${selectElem.value}')`);
+      }
+
+      /* =====================================================
+         MODAL DE COMPRA
+         ===================================================== */
+      function procesarIntencionCompra(productId, variacion) {
+        const prod = fullProductsDatabase.find(p => p.id === productId);
+        if (!prod || !currentUserCache) return;
+
+        let precioBase = prod.precio || 0;
+        if (prod.tipo === "key" && prod.precios_variaciones) {
+          precioBase = prod.precios_variaciones[variacion] || prod.precio || 0;
+        }
+        const costeFinal = precioBase * currentDiscountMultiplier;
+        const saldoTotal = parseFloat(currentUserCache.dinero_usd || 0);
+        const modal = document.getElementById('sakuGlobalModal');
+        const frame = document.getElementById('modalFrameContent');
+
+        if (saldoTotal < costeFinal) {
+          // ERROR SALDO INSUFICIENTE — igual a captura 2
+          frame.innerHTML = `
+            <div class="modal-icon-center error"><i class="fas fa-times-circle"></i></div>
+            <h3 class="modal-title-main">ERROR</h3>
+            <p class="modal-subtitle">Saldo insuficiente.</p>
+            <div class="order-receipt-box">
+              <div class="receipt-item-row"><span>Costo:</span><span>$${costeFinal.toFixed(2)}</span></div>
+              <div class="receipt-item-row"><span>Tu saldo:</span><span style="color:var(--danger);">$${saldoTotal.toFixed(2)}</span></div>
+            </div>
+            <button class="btn-modal-action danger" onclick="cerrarSakuModal()">CERRAR</button>
+          `;
+        } else {
+          // CONFIRMACIÓN — igual a captura 3
+          frame.innerHTML = `
+            <img src="${prod.imagen_url || 'https://i.imgur.com/v2Z2vX3.png'}" class="modal-product-img" onerror="this.src='https://i.imgur.com/v2Z2vX3.png'">
+            <h3 class="modal-title-main">${prod.nombre}</h3>
+            <p class="modal-subtitle">${prod.descripcion || 'Calidad Supreme.'}</p>
+            <button class="btn-modal-action primary" id="btnConfirmDebit">PAGAR ($${costeFinal.toFixed(2)})</button>
+            <button class="btn-modal-action ghost" onclick="cerrarSakuModal()">VOLVER</button>
+          `;
+          document.getElementById('btnConfirmDebit').onclick = () => executionFinalDebito(prod, variacion, costeFinal);
+        }
+
+        modal.classList.add('show');
+      }
+
+      /* =====================================================
+         EJECUCIÓN DÉBITO Y REGISTRO
+         ===================================================== */
+      function executionFinalDebito(prod, variacion, coste) {
+        const uid      = currentUserCache.uid;
+        const username = currentUserCache.username || uid;
+        let saldoActual = parseFloat(currentUserCache.dinero_usd || 0);
+        const nuevoSaldo = parseFloat((saldoActual - coste).toFixed(2));
+
+        // Actualizar saldo en usuarios/clientes/lista/{docId}
+        const clienteDocId = currentUserCache.clienteDocId || uid;
+        const clienteRef = db.collection('usuarios').doc('clientes').collection('lista').doc(clienteDocId);
+
+        // Key real desde RTDB keys_stock si hay, sino simulada
+        let keyGenerada = "";
+        if (prod.tipo === "key" && prod.keys_disponibles && prod.keys_disponibles.length > 0) {
+          const keyObj = prod.keys_disponibles[0];
+          keyGenerada = (typeof keyObj === 'string') ? keyObj : (keyObj.key || keyObj.valor || keyObj.code || JSON.stringify(keyObj));
+          // Remover la key usada de RTDB
+          if (prod.keys_stock) {
+            const keyId = Object.keys(prod.keys_stock)[0];
+            if (keyId) rtdb.ref(`productos/${prod.id}/keys_stock/${keyId}`).remove();
+          }
+        } else if (prod.tipo === "key") {
+          keyGenerada = `SAKU-${Math.random().toString(36).substring(2,7).toUpperCase()}-${Math.random().toString(36).substring(2,7).toUpperCase()}-${Math.random().toString(36).substring(2,5).toUpperCase()}`;
+        } else {
+          keyGenerada = "SERVICIO EN ESPERA DE ACTIVACIÓN";
+        }
+
+        const fechaHoy = new Date().toLocaleString('es-ES');
+
+        const batch = db.batch();
+
+        // Descontar saldo del cliente
+        batch.update(clienteRef, { dinero_usd: nuevoSaldo });
+
+        // Guardar compra en subcolección del usuario
+        const userRef   = db.collection('usuarios').doc(uid);
+        const compraRef = userRef.collection('compras').doc();
+        batch.set(compraRef, {
+          producto:  prod.nombre,
+          categoria: prod.categoria,
+          precio:    coste,
+          fecha:     fechaHoy,
+          variacion: variacion,
+          tipo:      prod.tipo,
+          detalles:  prod.tipo === "key" ? `Licencia: ${keyGenerada} (${variacion.replace(/_/g,' ')})` : "Activación en proceso",
+          key:       prod.tipo === "key" ? keyGenerada : null,
+          username:  username,
+          usada:     false
+        });
+
+        // Guardar en colección global ventas (para admin)
+        const ventaRef = db.collection('ventas').doc(compraRef.id);
+        batch.set(ventaRef, {
+          uid:       uid,
+          username:  username,
+          producto:  prod.nombre,
+          categoria: prod.categoria,
+          precio:    coste,
+          variacion: variacion,
+          tipo:      prod.tipo,
+          key:       prod.tipo === "key" ? keyGenerada : null,
+          fecha:     fechaHoy,
+          usada:     false,
+          estado:    prod.tipo === "key" ? "entregada" : "pendiente"
+        });
+
+        batch.commit().then(() => {
+          // Actualizar cache local
+          currentUserCache.dinero_usd = nuevoSaldo;
+          document.getElementById('topNavBalance').innerText   = saldoOculto ? "••••" : `$${nuevoSaldo.toFixed(2)}`;
+          document.getElementById('walletPrincipal').innerText = saldoOculto ? "••••" : `$${nuevoSaldo.toFixed(2)}`;
+
+          if (prod.tipo === "key") {
+            try { navigator.clipboard.writeText(keyGenerada); } catch(e) {}
+          }
+
+          const frame = document.getElementById('modalFrameContent');
+          frame.innerHTML = `
+            <div class="modal-icon-center success"><i class="fas fa-check-circle"></i></div>
+            <h3 class="modal-title-main">KEY ENTREGADA</h3>
+            <p class="modal-subtitle">Tu orden fue procesada exitosamente.</p>
+            <div class="key-delivery-box">
+              <span class="key-label">TU LICENCIA / ENTREGA</span>
+              <div class="key-value-row">
+                <span class="key-text" id="keyTextDisplay">${keyGenerada}</span>
+                <button class="btn-copy-key" onclick="copiarKey('${keyGenerada}')"><i class="fas fa-copy"></i></button>
+              </div>
+              <span class="key-copied-hint" id="keyCopiedHint"><i class="fas fa-check"></i> ¡Copiada al portapapeles!</span>
+            </div>
+            <button class="btn-modal-action primary" onclick="cerrarSakuModal()">CERRAR</button>
+          `;
+        }).catch(err => {
+          mostrarToast("❌ Error en transacción: " + err.message);
+        });
+      }
+
+      function copiarKey(keyText) {
+        try {
+          navigator.clipboard.writeText(keyText).then(() => {
+            const hint = document.getElementById('keyCopiedHint');
+            if (hint) { hint.classList.add('show'); setTimeout(() => hint.classList.remove('show'), 2500); }
+          });
+        } catch(e) {}
+      }
+
+      function cerrarSakuModal() {
+        document.getElementById('sakuGlobalModal').classList.remove('show');
+      }
+
+      /* =====================================================
+         PERFIL — RENDER
+         ===================================================== */
+      function renderizarPerfil(data) {
+        // Rango viene directo del campo "rango" de Firestore (clientes/lista)
+        const rangoKey  = data.rango || data.rango_manual || obtenerRangoPorDinero(data.total_recargado || 0);
+        const rangoInfo = RANGOS_INFO[rangoKey] || RANGOS_INFO.cliente_verificado;
+
+        document.getElementById('perfUsername').innerText    = data.username || "Usuario";
+        document.getElementById('perfNombreReal').innerText  = data.nombre_completo || data.nombre_real || "Sin registrar";
+        document.getElementById('perfContacto').innerText    = data.contacto || "No asignado";
+        document.getElementById('perfFechaRegistro').innerText = data.fecha_registro || data.fecha_registrostr || "—";
+        document.getElementById('perfRango').innerText       = rangoInfo.nombre;
+        document.getElementById('perfRango').style.color     = rangoInfo.color;
+        document.getElementById('perfRangoSmall').innerText  = rangoInfo.nombre;
+        document.getElementById('perfRangoSmall').style.color = rangoInfo.color;
+
+        // Contraseña: intentar desde el token de Auth (providerData)
+        const authUser = firebase.auth().currentUser;
+        const passElem = document.getElementById('perfPassword');
+        // Firebase no expone la contraseña en texto plano por seguridad,
+        // mostramos el email del proveedor como referencia de cuenta
+        if (authUser) {
+          const emailAcc = authUser.email || '';
+          // Si el admin guardó la pass en el doc de usuario la usamos, sino mostramos aviso
+          const rawPass = data.password || data.contrasena || '';
+          passElem.setAttribute('data-raw', rawPass || '(protegida por Firebase)');
+        } else {
+          passElem.setAttribute('data-raw', data.password || '(protegida)');
+        }
+        if (!passElem.classList.contains('visible')) passElem.innerText = '••••••••';
+
+        // Borde card según rango
+        document.getElementById('mainProfileCard').style.borderColor = `${rangoInfo.color}50`;
+
+        // Rango display
+        document.getElementById('rangoNombreDisplay').innerText     = rangoInfo.nombre;
+        document.getElementById('rangoNombreDisplay').style.color   = rangoInfo.color;
+        document.getElementById('rangoDescuentoBadge').innerText    = `${rangoInfo.desc}% desc.`;
+
+        // Verificado: leer del cache (ya leído de Firestore en escucharDatosUsuario)
+        const verificado = data.verificado === true;
+        const checkIcon = document.getElementById('verifiedCheckIcon');
+        checkIcon.style.display = verificado ? 'inline' : 'none';
+        const cv = document.getElementById('configVerifStatus');
+        if (cv) cv.innerText = verificado ? "Activa ✓" : "Inactiva";
+
+        // Beneficios según rango
+        const idxActual = ORDEN_RANGOS.indexOf(rangoKey);
+        const lista = document.getElementById('rankBenefitsList');
+        lista.innerHTML = "";
+        BENEFICIOS_RANGOS.forEach(b => {
+          const idxReq = ORDEN_RANGOS.indexOf(b.desde);
+          const activo = idxActual >= idxReq;
+          const item = document.createElement('div');
+          item.className = "rank-benefit-item";
+          item.innerHTML = `
+            <div class="benefit-icon ${activo ? 'active' : 'locked'}">
+              <i class="fas fa-${activo ? 'check' : 'lock'}"></i>
+            </div>
+            <span class="${activo ? '' : 'benefit-text locked'}">${b.texto}</span>
+          `;
+          lista.appendChild(item);
+        });
+
+        // Cargar historiales desde subcolección del usuario en Firestore
+        cargarHistorialCompras(data.uid);
+        cargarHistorialRecargas(data.uid);
+      }
+
+      function cargarHistorialCompras(uid) {
+        db.collection('usuarios').doc(uid).collection('compras')
+          .orderBy('fecha', 'desc').limit(20)
+          .onSnapshot(snap => {
+            const cont = document.getElementById('histCompras');
+            if (snap.empty) {
+              cont.innerHTML = `<p style="font-size:0.82rem;color:var(--text-gray);text-align:center;padding:10px;">Sin registros de compras.</p>`;
+              return;
+            }
+            cont.innerHTML = "";
+            snap.forEach(doc => {
+              const d = doc.data();
+              const div = document.createElement('div');
+              div.className = "history-item";
+              div.onclick = () => div.classList.toggle('open');
+              div.innerHTML = `
+                <div class="history-item-summary">
+                  <div>
+                    <div class="hi-title">${d.producto || '—'}</div>
+                    <div class="hi-date">${d.fecha || '—'}</div>
+                  </div>
+                  <div class="hi-price neg">-$${(d.precio||0).toFixed(2)}</div>
+                </div>
+                <div class="hi-details">
+                  <strong>ID:</strong> <span style="font-family:monospace;color:var(--cyan-neon);font-size:0.78rem;">${doc.id}</span><br>
+                  <strong>Entrega:</strong> ${d.detalles || '—'}<br>
+                  <strong>Estado:</strong> <span style="color:var(--success);">Completado ✓</span>
+                </div>
+              `;
+              cont.appendChild(div);
+            });
+          });
+      }
+
+      function cargarHistorialRecargas(uid) {
+        db.collection('usuarios').doc(uid).collection('recargas')
+          .orderBy('fecha', 'desc').limit(20)
+          .onSnapshot(snap => {
+            const cont = document.getElementById('histRecargas');
+            if (snap.empty) {
+              cont.innerHTML = `<p style="font-size:0.82rem;color:var(--text-gray);text-align:center;padding:10px;">Sin registros de recargas.</p>`;
+              return;
+            }
+            cont.innerHTML = "";
+            snap.forEach(doc => {
+              const d = doc.data();
+              const div = document.createElement('div');
+              div.className = "history-item";
+              div.onclick = () => div.classList.toggle('open');
+              div.innerHTML = `
+                <div class="history-item-summary">
+                  <div>
+                    <div class="hi-title">Recarga de Saldo</div>
+                    <div class="hi-date">${d.fecha || '—'}</div>
+                  </div>
+                  <div class="hi-price pos">+$${(d.monto||0).toFixed(2)}</div>
+                </div>
+                <div class="hi-details">
+                  <strong>Método:</strong> ${d.metodo || '—'}<br>
+                  <strong>Código:</strong> <span style="font-family:monospace;color:var(--magenta-neon);">${d.codigo_validacion || 'N/A'}</span><br>
+                  ${d.comprobante_b64 ? `<button class="btn-receipt-view" onclick="event.stopPropagation();abrirReceipt('${d.comprobante_b64}')"><i class="fas fa-image"></i> Ver Comprobante</button>` : ''}
+                </div>
+              `;
+              cont.appendChild(div);
+            });
+          });
+      }
+
+      /* =====================================================
+         PERFIL — CONTROLES
+         ===================================================== */
+      function togglePass() {
+        const el   = document.getElementById('perfPassword');
+        const icon = document.getElementById('passIcon');
+        const raw  = el.getAttribute('data-raw');
+        if (el.classList.contains('visible')) {
+          el.innerText = '••••••••';
+          el.classList.remove('visible');
+          icon.className = 'fas fa-eye';
+        } else {
+          el.innerText = raw || '(no registrada)';
+          el.classList.add('visible');
+          icon.className = 'fas fa-eye-slash';
+        }
+      }
+
+      function abrirReceipt(b64) {
+        const img = document.getElementById('receiptImage');
+        img.src = b64.startsWith('data:image') ? b64 : `data:image/png;base64,${b64}`;
+        document.getElementById('receiptModal').classList.add('show');
+      }
+
+      function cerrarReceiptModal() {
+        document.getElementById('receiptModal').classList.remove('show');
+      }
+
+      /* =====================================================
+         CONFIGURACIONES
+         ===================================================== */
+      function toggleOcultarSaldo(checkbox) {
+        saldoOculto = checkbox.checked;
+        if (currentUserCache) {
+          const saldo = currentUserCache.dinero_usd || 0;
+          document.getElementById('topNavBalance').innerText   = saldoOculto ? "••••" : `$${parseFloat(saldo).toFixed(2)}`;
+          document.getElementById('walletPrincipal').innerText = saldoOculto ? "••••" : `$${parseFloat(saldo).toFixed(2)}`;
+          document.getElementById('walletBonus').innerText     = saldoOculto ? "••••" : `$0.00`;
+        }
+      }
+
+      /* =====================================================
+         TOAST
+         ===================================================== */
+      function mostrarToast(msg) {
+        const t = document.getElementById('sakuToast');
+        t.innerHTML = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2800);
+      }
+
+      /* =====================================================
+         CERRAR SESIÓN
+         ===================================================== */
+      function cerrarSesionSaku() {
+        firebase.auth().signOut().then(() => { window.location.href = "index.html"; });
+      }
+
+      // Init
+      document.getElementById('catalogSection').style.display = 'block';
+    </script>
+  </body>
+</html>
