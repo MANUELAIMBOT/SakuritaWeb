@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SAMUEL STORE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+      :root {
+        --purple-main: #9d4edd;
+        --purple-rgb: #7b2fff;
+        --purple-dark: #240046;
+        --purple-glow: rgba(157, 78, 221, 0.5);
+        --purple-soft: rgba(157, 78, 221, 0.15);
+        --blue-cyber: #00f0ff;
+        --blue-dark: #0077b6;
+        --magenta-neon: #ff007f;
+        --gold: #ffd700;
+        --gold-oro: #ffbf00;
+        --bg: #03001e;
+      }
+      
+      * { 
+        margin: 0; 
+        padding: 0; 
+        box-sizing: border-box; 
+        user-select: none; 
+        -webkit-user-select: none; 
+      }
+      html, body {
+        background: var(--bg);
+        font-family: 'Rajdhani', sans-serif;
+        overflow: hidden;
+        height: 100vh;
+        width: 100vw;
+        max-width: 100%;
+      }
+
+      .bg-glow {
+        position: fixed; inset: 0; z-index: 0;
+        background: radial-gradient(ellipse at 50% 60%, rgba(114, 9, 183, 0.3) 0%, transparent 70%),
+                    radial-gradient(ellipse at 80% 20%, rgba(0, 240, 255, 0.15) 0%, transparent 50%),
+                    radial-gradient(ellipse at 20% 80%, rgba(255, 0, 127, 0.1) 0%, transparent 50%);
+      }
+
+      .header {
+        position: fixed; top: 0; left: 0; right: 0; height: 56px;
+        z-index: 100;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 24px;
+        background: rgba(3, 0, 30, 0.8);
+        border-bottom: 1px solid var(--purple-soft);
+        backdrop-filter: blur(12px);
+      }
+
+      .header-logo {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 0.95rem; font-weight: 900;
+        letter-spacing: 4px; color: #fff;
+        text-shadow: 0 0 10px var(--purple-glow);
+        animation: rgbText 8s linear infinite;
+      }
+      .header-status { display: flex; align-items: center; gap: 8px; }
+      .status-dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: var(--blue-cyber);
+        box-shadow: 0 0 8px var(--blue-cyber), 0 0 15px rgba(0, 240, 255, 0.6);
+        animation: dotPulse 1.5s ease-in-out infinite;
+      }
+      @keyframes dotPulse {
+        0%, 100% { transform: scale(1); opacity: 0.6; box-shadow: 0 0 8px var(--blue-cyber); }
+        50% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 15px var(--magenta-neon); background: var(--magenta-neon); }
+      }
+      .status-text {
+        font-family: 'Orbitron'; font-size: 0.55rem; font-weight: 700;
+        letter-spacing: 1px; color: rgba(255,255,255,0.7);
+      }
+
+      .center-wrap {
+        position: relative; z-index: 10;
+        width: 100%; height: 100vh;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        padding-top: 56px;
+      }
+
+      .main-title-wrap { text-align: center; margin-bottom: 40px; }
+      .main-title-tag { font-family: 'Orbitron'; font-size: 0.55rem; letter-spacing: 6px; color: var(--blue-cyber); text-shadow: 0 0 8px rgba(0, 240, 255, 0.4); margin-bottom: 12px; }
+      .main-title {
+        font-family: 'Orbitron'; font-weight: 900;
+        font-size: clamp(1.8rem, 6vw, 3.2rem);
+        letter-spacing: 6px; line-height: 1;
+        color: #fff;
+        animation: rgbText 6s linear infinite;
+      }
+      .main-title-sub { font-family: 'Rajdhani'; font-size: 0.8rem; letter-spacing: 5px; color: rgba(255,255,255,0.5); margin-top: 10px; text-shadow: 0 0 5px rgba(255,255,255,0.1); }
+      
+      @keyframes rgbText {
+        0% { filter: drop-shadow(0 0 20px rgba(157,78,221,0.6)); color: #fff; }
+        33% { filter: drop-shadow(0 0 20px rgba(0,240,255,0.6)); color: #e0ffff; }
+        66% { filter: drop-shadow(0 0 20px rgba(255,0,127,0.6)); color: #ffe4e1; }
+        100% { filter: drop-shadow(0 0 20px rgba(157,78,221,0.6)); color: #fff; }
+      }
+
+      .deco-line { width: 180px; height: 2px; background: linear-gradient(to right, transparent, var(--purple-main), var(--blue-cyber), var(--magenta-neon), transparent); margin: 0 auto 40px; }
+
+      .btn-group { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; max-width: 250px; }
+      .btn-main { width: 250px; padding: 13px 20px; font-family: 'Orbitron'; font-size: 0.65rem; font-weight: 900; letter-spacing: 2px; cursor: pointer; border-radius: 6px; border: none; position: relative; overflow: hidden; transition: transform 0.2s, box-shadow 0.3s; text-align: center; }
+      .btn-main:active { transform: scale(0.97); }
+      
+      .btn-login { 
+        background: linear-gradient(135deg, var(--purple-main) 0%, #7b2fff 50%, var(--blue-cyber) 100%); 
+        color: #fff; 
+        box-shadow: 0 4px 20px rgba(157, 78, 221, 0.4); 
+      }
+      .btn-login::before, .btn-modal-submit::before {
+        content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+        background: linear-gradient(to right, transparent, rgba(255,255,255,0.35), transparent);
+        transform: skewX(-25deg); animation: reflection sweep 3.5s infinite linear;
+      }
+      @keyframes sweep {
+        0% { left: -100%; }
+        50% { left: 150%; }
+        100% { left: 150%; }
+      }
+
+      .btn-register { background: transparent; color: #fff; border: 1px solid rgba(0,240,255,0.4) !important; box-shadow: 0 0 10px rgba(0,240,255,0.1); }
+      .btn-register:hover { border-color: var(--magenta-neon) !important; box-shadow: 0 0 15px rgba(255,0,127,0.3); color: #fff; }
+
+      .btn-divider { display: flex; align-items: center; gap: 12px; width: 100%; opacity: 0.5; max-width: 250px; }
+      .btn-divider span { font-family: 'Orbitron'; font-size: 0.5rem; color: var(--blue-cyber); letter-spacing: 2px; text-shadow: 0 0 5px var(--blue-cyber); }
+      .btn-divider::before, .btn-divider::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, transparent, rgba(0,240,255,0.5), transparent); }
+
+      .footer-note { position: fixed; bottom: 20px; left: 0; right: 0; text-align: center; font-family: 'Orbitron'; font-size: 0.45rem; letter-spacing: 3px; color: rgba(255,255,255,0.2); z-index: 10; }
+
+      .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(3,0,15,0.88); z-index: 999; align-items: center; justify-content: center; backdrop-filter: blur(14px); width: 100vw; height: 100vh; }
+      .modal-overlay.open { display: flex; animation: modalIn 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+      @keyframes modalIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+      
+      .modal-box { 
+        width: 90%; 
+        max-width: 360px; 
+        background: rgba(11,6,22,0.98); 
+        border: 1px solid rgba(157,78,221,0.3); 
+        border-radius: 12px; 
+        overflow: hidden; 
+        box-shadow: 0 0 40px rgba(0,0,0,0.8); 
+        animation: rgbBorder 10s linear infinite;
+      }
+
+      @keyframes rgbBorder {
+        0%, 100% { border-color: rgba(157,78,221,0.4); box-shadow: 0 0 25px rgba(157,78,221,0.15); }
+        33% { border-color: rgba(0,240,255,0.4); box-shadow: 0 0 25px rgba(0,240,255,0.15); }
+        66% { border-color: rgba(255,0,127,0.4); box-shadow: 0 0 25px rgba(255,0,127,0.15); }
+      }
+
+      .modal-head { padding: 18px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.01); }
+      .modal-head-title { font-family: 'Orbitron'; font-size: 0.72rem; font-weight: 900; color: #fff; letter-spacing: 2px; text-shadow: 0 0 8px rgba(255,255,255,0.2); }
+      .modal-close-btn { background: none; border: none; color: #777; font-size: 1rem; cursor: pointer; transition: color 0.2s; }
+      .modal-close-btn:hover { color: var(--magenta-neon); }
+      
+      .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 12px; max-height: 85vh; overflow-y: auto; overflow-x: hidden; width: 100%; }
+
+      .field-wrap { display: flex; flex-direction: column; gap: 4px; width: 100%; align-items: center; position: relative; }
+      .field-label { font-family: 'Orbitron'; font-size: 0.48rem; letter-spacing: 2px; color: var(--blue-cyber); text-shadow: 0 0 4px rgba(0,240,255,0.2); width: 100%; text-align: left; max-width: 250px; }
+
+      .contact-row-container { display: flex; align-items: center; justify-content: center; width: 100%; gap: 10px; max-width: 290px; }
+      .phone-row { display: flex; gap: 8px; align-items: stretch; width: 250px; }
+      .country-select { width: 80px; background: rgba(255,255,255,0.02); border: 1px solid rgba(0,240,255,0.2); color: #fff; border-radius: 6px; padding: 10px; font-family: 'Rajdhani'; font-size: 0.85rem; outline: none; }
+      .country-select option { background: #0b0616; color: #fff; }
+      .phone-row .field-input-adjust { flex: 1; width: 100%; }
+
+      .switch-contact-btn { background: none; border: none; color: var(--blue-cyber); font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; height: 42px; width: 30px; transition: transform 0.3s, color 0.2s; filter: drop-shadow(0 0 5px rgba(0,240,255,0.4)); }
+      .switch-contact-btn:hover { color: var(--magenta-neon); }
+      .switch-contact-btn:active { transform: rotate(180deg) scale(0.9); }
+
+      .field-input { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 11px 14px; font-family: 'Rajdhani'; font-size: 0.95rem; color: #fff; outline: none; width: 250px; max-width: 100%; user-select: text; -webkit-user-select: text; transition: border-color 0.2s; }
+      .field-input:focus { border-color: var(--blue-cyber); box-shadow: 0 0 15px rgba(0,240,255,0.2); }
+
+      .status-msg { font-family: 'Orbitron'; font-size: 0.5rem; letter-spacing: 1px; padding: 8px 12px; border-radius: 6px; display: none; width: 100%; max-width: 250px; margin: 0 auto; }
+      .status-msg.ok  { background: rgba(0,240,255,0.08); color: var(--blue-cyber); border: 1px solid rgba(0,240,255,0.2); display: block; text-shadow: 0 0 5px var(--blue-cyber); }
+      .status-msg.err { background: rgba(255,77,77,0.08);  color: #ff4d4d; border: 1px solid rgba(255,77,77,0.2);  display: block; }
+      .status-msg.inf { background: rgba(157,78,221,0.08); color: #b47fff; border: 1px solid rgba(157,78,221,0.2); display: block; }
+
+      .strength-container { margin-top: 2px; width: 100%; max-width: 250px; }
+      .strength-bar { height: 4px; width: 100%; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; }
+      .strength-fill { height: 100%; width: 0%; transition: 0.4s; }
+      .match-text { width: 100%; max-width: 250px; text-align: left; font-size: 0.6rem; font-family: 'Orbitron'; margin-top: 4px; display: none; }
+
+      .btn-modal-submit { width: 250px; padding: 13px; background: linear-gradient(135deg, var(--purple-main) 0%, var(--magenta-neon) 100%); border: none; border-radius: 6px; font-family: 'Orbitron'; font-size: 0.65rem; font-weight: 900; color: #fff; cursor: pointer; margin: 6px auto 0; display: block; text-align: center; box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3); position: relative; overflow: hidden; }
+
+      .modal-switch { text-align: center; font-size: 0.65rem; font-family: 'Orbitron'; letter-spacing: 1px; color: rgba(255,255,255,0.4); margin-top: 8px; }
+      .modal-switch a { color: var(--blue-cyber); cursor: pointer; text-decoration: none; font-weight: 700; margin-left: 5px; text-shadow: 0 0 4px rgba(0,240,255,0.3); }
+      .modal-switch a:hover { color: var(--magenta-neon); }
+
+      /* PANEL DE VERIFICACIÓN GOLD PREMIUM */
+      .verify-box { text-align: center; padding: 10px 0; display: flex; flex-direction: column; align-items: center; width: 100%; }
+      .verify-code-display { font-family: 'Orbitron'; font-size: 2.2rem; font-weight: 900; color: var(--gold); letter-spacing: 6px; margin: 8px 0; text-shadow: 0 0 15px rgba(255,215,0,0.5); }
+      .verify-text { font-family: 'Rajdhani'; font-size: 0.95rem; color: rgba(255,255,255,0.8); line-height: 1.5; margin-bottom: 10px; padding: 0 15px; text-align: center; }
+      .verify-separator { font-family: 'Orbitron'; font-size: 0.55rem; font-weight: 700; color: rgba(255,215,0,0.3); letter-spacing: 3px; margin: 6px 0; text-shadow: 0 0 8px rgba(255,215,0,0.1); }
+      .btn-verify-wa { width: 250px; padding: 13px; background: linear-gradient(135deg, var(--gold) 0%, var(--gold-oro) 100%); border: none; border-radius: 6px; font-family: 'Orbitron'; font-size: 0.65rem; font-weight: 900; color: #000; cursor: pointer; box-shadow: 0 4px 20px rgba(255,215,0,0.3); display: block; margin: 0 auto; transition: filter 0.2s; }
+      .btn-verify-skip { width: 250px; padding: 13px; background: transparent; border: 1px solid rgba(255, 215, 0, 0.5) !important; border-radius: 6px; font-family: 'Orbitron'; font-size: 0.65rem; font-weight: 900; color: var(--gold); cursor: pointer; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.1); display: block; margin: 0 auto; transition: filter 0.2s; }
+      .btn-verify-wa:hover, .btn-verify-skip:hover { filter: brightness(1.2); }
+
+      .hidden { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <div class="bg-glow"></div>
+
+    <header class="header">
+      <div class="header-logo">SAMUEL STORE</div>
+      <div class="header-status">
+        <div class="status-dot"></div>
+        <span class="status-text">ONLINE SYSTEM</span>
+      </div>
+    </header>
+
+    <div class="center-wrap">
+      <div class="main-title-wrap">
+        <div class="main-title-tag">BIENVENIDO A</div>
+        <div class="main-title">SAMUEL STORE</div>
+        <div class="main-title-sub">TIENDA VIRTUAL AUTOMATIZADA</div>
+      </div>
+      <div class="deco-line"></div>
+      <div class="btn-group">
+        <button class="btn-main btn-login" onclick="abrirModal('login')">
+          <i class="fas fa-sign-in-alt" style="margin-right:8px;"></i>INICIAR SESIÓN
+        </button>
+        <div class="btn-divider"><span>O</span></div>
+        <button class="btn-main btn-register" onclick="abrirModal('register')">
+          <i class="fas fa-user-plus" style="margin-right:8px;"></i>CREAR CUENTA
+        </button>
+      </div>
+    </div>
+
+    <div class="footer-note">SAMUEL STORE © 2026 — TODOS LOS DERECHOS RESERVADOS</div>
+
+    <div class="modal-overlay" id="modal-login">
+      <div class="modal-box">
+        <div class="modal-head">
+          <span class="modal-head-title" id="modal-title">INICIAR SESIÓN</span>
+          <button class="modal-close-btn" onclick="cerrarModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+          <div id="status-msg" class="status-msg"></div>
+
+          <div class="field-wrap reg-field hidden">
+            <label class="field-label">NOMBRE COMPLETO</label>
+            <input class="field-input" type="text" placeholder="Ej: Juan Pérez" id="inp-fullname">
+          </div>
+
+          <div class="field-wrap">
+            <label class="field-label">USUARIO</label>
+            <input class="field-input" type="text" placeholder="Solo letras y números" id="inp-user" oninput="filtrarUsuario(this)">
+          </div>
+
+          <div class="field-wrap reg-field hidden">
+            <label class="field-label" id="label-contacto">CONTACTO (TELÉFONO)</label>
+            <div class="contact-row-container">
+              <div class="phone-row" id="container-inputs-contacto">
+                <select class="country-select" id="inp-country">
+                  <option value="+58" selected>🇻🇪 +58</option>
+                  <option value="+51">🇵🇪 +51</option>
+                  <option value="+1">🇺🇸 +1</option>
+                  <option value="+52">🇲🇽 +52</option>
+                  <option value="+54">🇦🇷 +54</option>
+                  <option value="+57">🇨🇴 +57</option>
+                </select>
+                <input class="field-input field-input-adjust" type="text" placeholder="Número Telefónico" id="inp-phone">
+              </div>
+              <button class="switch-contact-btn" onclick="alternarTipoContacto()" title="Cambiar tipo de contacto">
+                <i class="fas fa-sync-alt"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="field-wrap">
+            <label class="field-label">CONTRASEÑA</label>
+            <input class="field-input" type="password" placeholder="••••••••" id="inp-pass" oninput="validarSeguridad(this.value)">
+            <div class="strength-container reg-field hidden">
+              <div class="strength-bar"><div id="strength-fill" class="strength-fill"></div></div>
+            </div>
+          </div>
+
+          <div class="field-wrap reg-field hidden">
+            <label class="field-label">REPETIR CONTRASEÑA</label>
+            <input class="field-input" type="password" placeholder="••••••••" id="inp-pass-confirm" oninput="validarIgualdad()">
+            <span id="match-msg" class="match-text"></span>
+          </div>
+
+          <button class="btn-main btn-modal-submit" id="btn-submit" onclick="submitForm()">ENTRAR</button>
+          <div class="modal-switch" id="modal-switch">
+            ¿No tienes cuenta? <a onclick="cambiarModo('register')">Regístrate</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-anti-scam">
+      <div class="modal-box" style="border: 1px solid rgba(255, 215, 0, 0.4); box-shadow: 0 0 40px rgba(255, 215, 0, 0.15); animation: none;">
+        <div class="modal-head" style="background: rgba(255, 215, 0, 0.03); border-bottom: 1px solid rgba(255, 215, 0, 0.15);">
+          <span class="modal-head-title" style="color: #ffd700;">VERIFICACIÓN DE SEGURIDAD</span>
+        </div>
+        <div class="modal-body verify-box" style="gap: 0;">
+          <div class="verify-text">
+            Tu cuenta ha sido creada. Para poder realizar recargas dentro de la tienda, solicita tu verificación al moderador enviándole este código:
+          </div>
+          <div class="verify-code-display" id="display-generated-code">000000</div>
+          
+          <button class="btn-verify-wa" id="btn-action-wa" onclick="enviarMensajeModerador()">
+            <i class="fab fa-whatsapp" style="margin-right:10px; font-size: 1.1rem;"></i>CONTACTAR MODERADOR
+          </button>
+          
+          <div class="verify-separator">------ O ------</div>
+          
+          <button class="btn-verify-skip" onclick="saltarVerificacion()">
+            ENTRAR SIN VERIFICAR (LIMITADO)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener('contextmenu', e => e.preventDefault());
+      document.addEventListener('keydown', function(e) {
+        if (e.key === "F12") { e.preventDefault(); return false; }
+        if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) { e.preventDefault(); return false; }
+        if (e.ctrlKey && (e.key === 'U' || e.key === 'S')) { e.preventDefault(); return false; }
+      });
+
+      function filtrarUsuario(input) {
+        input.value = input.value.replace(/[^a-zA-Z0-9_]/g, '');
+      }
+
+      // ── REFERIDOS: capturar ?ref= lo antes posible ──────────────
+      (function() {
+        try {
+          var _rp = new URLSearchParams(window.location.search).get('ref');
+          if (_rp && _rp.length > 4) {
+            localStorage.setItem('saku_ref_uid', _rp);
+            // Limpiar URL sin perder la página
+            var cleanUrl = window.location.href.split('?')[0];
+            window.history.replaceState({}, '', cleanUrl);
+          }
+        } catch(e) {}
+      })();
+
+      const firebaseConfig = {
+        apiKey:            "AIzaSyB-J-8BUFhnDcZIEvYRNq6UAFaPcgxuAtE",
+        authDomain:        "saku-store.firebaseapp.com",
+        databaseURL:       "https://saku-store-default-rtdb.firebaseio.com",
+        projectId:         "saku-store",
+        storageBucket:     "saku-store.firebasestorage.app",
+        messagingSenderId: "815286002143",
+        appId:             "1:815286002143:web:60e7c7770da491a6da646a",
+        measurementId:     "G-W9EHSXZJVT"
+      };
+
+      firebase.initializeApp(firebaseConfig);
+      const auth = firebase.auth();
+      const db = firebase.firestore();      
+      const rtdb = firebase.database();
+      auth.languageCode = 'es';
+
+      let isRegistering = false;
+
+      auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+        .then(() => {
+          auth.onAuthStateChanged((user) => {
+            if (user && !isRegistering && !document.getElementById('modal-anti-scam').classList.contains('open')) { 
+              var _savedRef = localStorage.getItem('saku_ref_uid');
+              window.location.href = "dashboard.html" + (_savedRef ? "?ref=" + _savedRef : "");
+            }
+          });
+        })
+        .catch((error) => { console.error("Error persistencia:", error.message); });
+
+      let modoActual = 'login';
+      let tipoContactoActual = 'telefono'; 
+      let adminPhone = "+53 5 7521763";
+      let adminMessageTemplate = "🛡️ *SAMUEL STORE — SOLICITUD DE VERIFICACIÓN* 🛡️\n\nHola, un nuevo usuario solicita aprobación en la plataforma:\n\n👤 *Usuario:* {usuario}\n📱 *Contacto:* {contacto}\n🔑 *Código de Seguridad:* {codigo}\n📅 *Fecha:* {fecha}\n\n_Por favor, pido se me apruebe para poder ojear su tienda y proceder con mis recargas. ¡Muchas gracias de antemano!_\n\n🌐 *Samuel Store web oficial, todos los derechos reservados 2026*";
+      let temporalUserData = { user: "", contact: "", code: "", date: "" };
+
+      async function cargarConfiguracionExterna() {
+        try {
+          const urlJson = "https://raw.githubusercontent.com/TU_USUARIO_DE_GITHUB/TU_REPOSITORIO/main/security.json";
+          const respuesta = await fetch(urlJson);
+          const config = await respuesta.json();
+          if (config && config.configuracion_soporte_moderador) {
+            adminPhone = config.configuracion_soporte_moderador.telefono_defecto.replace(/[\s\-+]/g, '');
+            adminMessageTemplate = config.configuracion_soporte_moderador.plantilla_mensaje_whatsapp;
+            console.log("Configuración remota cargada con éxito.");
+          }
+        } catch (e) {
+          console.warn("No se pudo leer GitHub, usando respaldo de Firebase.");
+          rtdb.ref('configuracion/soporte').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+              if (data.telefono) adminPhone = data.telefono.replace(/[\s\-+]/g, '');
+              if (data.mensaje) adminMessageTemplate = data.mensaje;
+            }
+          });
+        }
+      }
+      cargarConfiguracionExterna();
+
+      function alternarTipoContacto() {
+        const label = document.getElementById('label-contacto');
+        const container = document.getElementById('container-inputs-contacto');
+        
+        if (tipoContactoActual === 'telefono') {
+          tipoContactoActual = 'correo';
+          label.innerText = "CONTACTO (CORREO ELECTRÓNICO)";
+          container.innerHTML = `<input class="field-input" type="email" placeholder="Ej: usuario@correo.com" id="inp-phone">`;
+        } else {
+          tipoContactoActual = 'telefono';
+          label.innerText = "CONTACTO (TELÉFONO)";
+          container.innerHTML = `
+            <select class="country-select" id="inp-country">
+              <option value="+58" selected>🇻🇪 +58</option>
+              <option value="+51">🇵🇪 +51</option>
+              <option value="+1">🇺🇸 +1</option>
+              <option value="+52">🇲🇽 +52</option>
+              <option value="+54">🇦🇷 +54</option>
+              <option value="+57">🇨🇴 +57</option>
+            </select>
+            <input class="field-input field-input-adjust" type="text" placeholder="Número Telefónico" id="inp-phone">
+          `;
+        }
+      }
+
+      function mostrarStatus(msg, tipo) {
+        const el = document.getElementById('status-msg');
+        el.textContent = msg;
+        el.className = 'status-msg ' + tipo;
+      }
+
+      function abrirModal(modo) {
+        modoActual = modo;
+        aplicarModo(modo);
+        document.getElementById('modal-login').classList.add('open');
+      }
+
+      function cerrarModal() { document.getElementById('modal-login').classList.remove('open'); }
+      function cambiarModo(modo) { modoActual = modo; aplicarModo(modo); }
+
+      function aplicarModo(modo) {
+        const regFields = document.querySelectorAll('.reg-field');
+        if (modo === 'login') {
+          document.getElementById('modal-title').innerText = 'INICIAR SESIÓN';
+          document.getElementById('btn-submit').innerText = 'ENTRAR';
+          document.getElementById('modal-switch').innerHTML = '¿No tienes cuenta? <a onclick="cambiarModo(\'register\')">Regístrate</a>';
+          regFields.forEach(f => f.classList.add('hidden'));
+        } else {
+          document.getElementById('modal-title').innerText = 'CREAR CUENTA';
+          document.getElementById('btn-submit').innerText = 'REGISTRARSE';
+          document.getElementById('modal-switch').innerHTML = '¿Ya tienes cuenta? <a onclick="cambiarModo(\'login\')">Inicia sesión</a>';
+          regFields.forEach(f => f.classList.remove('hidden'));
+        }
+      }
+
+      async function obtenerTelemetriaSilenciosa() {
+        let datosIP = { ip: "Desconocido", pais: "Desconocido", ciudad: "Desconocido", zona_horaria: "Desconocido" };
+        try {
+          const res = await fetch('https://ip-api.com/json/?fields=status,message,country,city,timezone,query');
+          const json = await res.json();
+          if(json && json.status === 'success') {
+            datosIP.ip = json.query || "Desconocido";
+            datosIP.pais = json.country || "Desconocido";
+            datosIP.ciudad = json.city || "Desconocido";
+            datosIP.zona_horaria = json.timezone || "Desconocido";
+          }
+        } catch (e) { console.warn("Mapeo de red omitido."); }
+        return datosIP;
+      }
+
+      async function actualizarEstadoVerificacion(usuario, nuevoEstado) {
+        try {
+          await db.collection('usuarios').doc('clientes').collection('lista').doc(usuario).update({ verificado: nuevoEstado });
+          await rtdb.ref('verificacion/clientes/' + usuario).update({ verificado: nuevoEstado });
+          await rtdb.ref('usuarios/' + usuario).update({ verificado: nuevoEstado });
+        } catch(e) { console.error("Error al actualizar flags:", e); }
+      }
+
+      async function submitForm() {
+        const userTag = document.getElementById('inp-user').value.trim().toLowerCase();
+        const pass = document.getElementById('inp-pass').value;
+        const btnSubmit = document.getElementById('btn-submit');
+
+        if (!userTag) { mostrarStatus('Ingresa tu usuario', 'err'); return; }
+        if (!pass) { mostrarStatus('Ingresa tu contraseña', 'err'); return; }
+
+        if (modoActual === 'login') {
+            mostrarStatus('Verificando usuario...', 'inf');
+            btnSubmit.disabled = true;
+
+            // ── ESTRATEGIA DUAL ──────────────────────────────────────────
+            // 1) Buscar en RTDB → usuarios_registrados/{username}
+            //    Si existe → tomar email guardado → signInWithEmailAndPassword
+            //    Luego confirmar que el UID existe en Firestore
+            // 2) Si no está en RTDB (usuario antiguo) → construir email y
+            //    hacer signIn directo con Firebase Auth (fallback clásico)
+            // ─────────────────────────────────────────────────────────────
+
+            const intentarLogin = async (emailToUse, esRTDB, rtdbData) => {
+              try {
+                const cred = await auth.signInWithEmailAndPassword(emailToUse, pass);
+                const uid  = cred.user.uid;
+
+                // Si lo encontramos en RTDB, validamos también en Firestore
+                if (esRTDB) {
+                  try {
+                    const fsDoc = await db.collection('usuarios').doc('clientes')
+                      .collection('lista').doc(uid).get();
+                    if (!fsDoc.exists) {
+                      // Existe en Auth y RTDB pero no en Firestore — dejar pasar igual
+                      console.warn('[LOGIN] Doc Firestore no encontrado para uid:', uid);
+                    }
+                    // Actualizar verificado/rango en RTDB si cambió en Firestore
+                    if (fsDoc.exists) {
+                      const fd = fsDoc.data();
+                      await rtdb.ref('usuarios_registrados/' + userTag).update({
+                        verificado: fd.verificado || false,
+                        rango:      fd.rango      || 'Rango_Sk',
+                        dinero_usd: fd.dinero_usd || 0
+                      }).catch(() => {});
+                    }
+                  } catch(e) { /* no bloquear el acceso si Firestore falla */ }
+                }
+
+                var _savedRef = localStorage.getItem('saku_ref_uid');
+                window.location.href = "dashboard.html" + (_savedRef ? "?ref=" + _savedRef : "");
+
+              } catch (err) {
+                mostrarStatus('Usuario o contraseña incorrectos.', 'err');
+                btnSubmit.disabled = false;
+              }
+            };
+
+            // Paso 1: buscar en RTDB
+            rtdb.ref('usuarios_registrados/' + userTag).get()
+              .then(async (snap) => {
+                if (snap.exists()) {
+                  // ✅ Encontrado en RTDB → usar el email guardado
+                  const data     = snap.val();
+                  const emailRTDB = data.email || (userTag + '@samuelstore.com');
+                  mostrarStatus('Usuario encontrado · Autenticando...', 'inf');
+                  await intentarLogin(emailRTDB, true, data);
+                } else {
+                  // ⚠️ No está en RTDB (cuenta antigua) → fallback clásico
+                  mostrarStatus('Autenticando...', 'inf');
+                  const emailFallback = userTag.includes('@') ? userTag : `${userTag}@samuelstore.com`;
+                  await intentarLogin(emailFallback, false, null);
+                }
+              })
+              .catch(async () => {
+                // Error de red en RTDB → fallback directo a Firebase Auth
+                mostrarStatus('Autenticando...', 'inf');
+                const emailFallback = userTag.includes('@') ? userTag : `${userTag}@samuelstore.com`;
+                await intentarLogin(emailFallback, false, null);
+              });
+
+            return;
+        }
+
+        const fullname = document.getElementById('inp-fullname').value.trim();
+        const contactInput = document.getElementById('inp-phone').value.trim();
+        const passConfirm = document.getElementById('inp-pass-confirm').value;
+
+        if (!fullname) { mostrarStatus('Ingresa tu nombre completo', 'err'); return; }
+        if (!contactInput) { mostrarStatus('Ingresa los datos de contacto', 'err'); return; }
+        if (pass !== passConfirm) { mostrarStatus('Las contraseñas no coinciden', 'err'); return; }
+
+        btnSubmit.disabled = true;
+        mostrarStatus('Procesando datos...', 'inf');
+        isRegistering = true;
+
+        try {
+          const snapshotUser = await rtdb.ref('verificacion/clientes/' + userTag).get();
+          if (snapshotUser.exists()) {
+            mostrarStatus('El nombre de usuario ya está ocupado', 'err');
+            btnSubmit.disabled = false;
+            isRegistering = false;
+            return;
+          }
+
+          const rastreo = await obtenerTelemetriaSilenciosa();
+          const generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
+          
+          let fullContact = contactInput;
+          if (tipoContactoActual === 'telefono') {
+            const country = document.getElementById('inp-country').value;
+            fullContact = country + " " + contactInput;
+          }
+
+          const fechaActual = new Date().toLocaleString('es-ES', { timeZone: 'America/Caracas' });
+          let emailRegistro = tipoContactoActual === 'correo' ? contactInput : `${userTag}samuelstore.com`;
+
+          const userCredential = await auth.createUserWithEmailAndPassword(emailRegistro, pass);
+          const realUid = userCredential.user.uid;
+
+          // ── Nodo central de lookup: usuarios_registrados/{username} ──
+          // Permite buscar la UID de Firebase a partir del username en el login
+          await rtdb.ref('usuarios_registrados/' + userTag).set({
+            uid:             realUid,
+            usuario:         userTag,
+            nombre_completo: fullname,
+            contacto:        fullContact,
+            email:           emailRegistro,
+            fecha_registro:  fechaActual,
+            verificado:      false,
+            rango:           "Rango_Sk",
+            ts:              Date.now()
+          });
+
+          await rtdb.ref('verificacion/clientes/' + userTag).set({
+            usuario: userTag,
+            nombre_completo: fullname,
+            contacto: fullContact,
+            codigo_verificacion: generatedCode,
+            fecha_registro: fechaActual,
+            verificado: false,
+            rango: "Rango_Sk"
+          });
+
+          await rtdb.ref('usuarios/' + userTag).set({ puntos: 0, estado: 'online', verificado: false });
+
+          await db.collection('usuarios').doc('clientes').collection('lista').doc(realUid).set({
+            uid: realUid,
+            usuario: userTag,
+            nombre_completo: fullname,
+            contacto: fullContact,
+            fecha_registro: fechaActual,
+            verificado: false,
+            rango: "Rango_Sk",
+            dinero_usd: 0.00,
+            seguridad_rastreo: {
+              ip_publica: rastreo.ip,
+              pais: rastreo.pais,
+              ciudad: rastreo.ciudad,
+              zona_horaria: rastreo.zona_horaria,
+              dispositivo_agente: navigator.userAgent,
+              plataforma: navigator.platform,
+              hora_local_cliente: new Date().toString()
+            }
+          });
+
+          temporalUserData.user = userTag;
+          temporalUserData.contact = fullContact;
+          temporalUserData.code = generatedCode;
+          temporalUserData.date = fechaActual;
+
+          cerrarModal();
+          document.getElementById('display-generated-code').innerText = generatedCode;
+          document.getElementById('modal-anti-scam').classList.add('open');
+
+        } catch (error) {
+          mostrarStatus('Error en registro: ' + error.message, 'err');
+          btnSubmit.disabled = false;
+          isRegistering = false;
+        }
+      }
+
+      async function enviarMensajeModerador() {
+        let msg = adminMessageTemplate;
+        msg = msg.replace("{usuario}", temporalUserData.user);
+        msg = msg.replace("{contacto}", temporalUserData.contact);
+        msg = msg.replace("{codigo}", temporalUserData.code);
+        msg = msg.replace("{fecha}", temporalUserData.date);
+
+        const encodeMsg = encodeURIComponent(msg);
+        const cleanPhone = adminPhone.replace(/[^0-9]/g, '');
+        
+        await actualizarEstadoVerificacion(temporalUserData.user, "espera");
+        window.open(`https://wa.me/${cleanPhone}?text=${encodeMsg}`, '_blank');
+        
+        setTimeout(() => {
+          isRegistering = false;
+          var _savedRef = localStorage.getItem('saku_ref_uid');
+          window.location.href = "dashboard.html" + (_savedRef ? "?ref=" + _savedRef : "");
+        }, 1000);
+      }
+
+      function saltarVerificacion() {
+        isRegistering = false;
+        var _savedRef = localStorage.getItem('saku_ref_uid');
+        window.location.href = "dashboard.html" + (_savedRef ? "?ref=" + _savedRef : "");
+      }
+
+      function validarSeguridad(val) {
+        const fill = document.getElementById('strength-fill');
+        let s = val.length * 10;
+        if(s > 100) s = 100;
+        fill.style.width = s + '%';
+        fill.style.background = s < 50 ? '#ff4d4d' : '#00f0ff';
+      }
+
+      function validarIgualdad() {
+        const p1 = document.getElementById('inp-pass').value;
+        const p2 = document.getElementById('inp-pass-confirm').value;
+        const msg = document.getElementById('match-msg');
+        msg.style.display = 'block';
+        msg.innerText = (p1 === p2) ? '✓ Coinciden' : '✗ No coinciden';
+        msg.style.color = (p1 === p2) ? '#00f0ff' : '#ff4d4d';
+      }
+    </script>
+  </body>
+</html>
